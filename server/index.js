@@ -4,6 +4,9 @@ const app = express()
 
 require('dotenv').config()
 
+// Start date label update cron job
+require('./jobs/dateStatusJob')
+
 const session = require('express-session')
 const cookieParser = require('cookie-parser')
 

@@ -24,35 +24,37 @@ model User {
 }
 
 model Task {
-  id          String   @id @default(uuid(7))
-  title       String
-  description String
-  clientId    String
-  category    String
-  priority    String
-  status      String
-  dueDate     DateTime
-  createdAt   DateTime @default(now())
+  id           String   @id @default(uuid(7))
+  title        String
+  description  String
+  clientId     String
+  category     String
+  priority     String
+  status       String
+  dueDate      DateTime
+  dueDateLabel String   @default("Upcoming")
+  createdAt    DateTime @default(now())
 
   user User @relation(fields: [clientId], references: [id], onDelete: Cascade)
 }
 
 model Lead {
-  id             String   @id @default(uuid(7))
-  name           String
-  email          String   @unique
-  mobile         String   @unique
-  interested     String
-  lead_value     String
-  pan            String   @unique
-  status         String
-  source         String
-  nature         String
-  follow_up_date DateTime
-  reminder       Boolean
-  description    String
-  documents      String[]
-  primary_user   String
+  id              String   @id @default(uuid(7))
+  name            String
+  email           String   @unique
+  mobile          String   @unique
+  interested      String
+  lead_value      String
+  pan             String   @unique
+  status          String
+  source          String
+  nature          String
+  follow_up_date  DateTime
+  follow_up_label String   @default("Upcoming")
+  reminder        Boolean
+  description     String
+  documents       String[]
+  primary_user    String
 
   user User @relation(fields: [primary_user], references: [email], onDelete: Cascade)
 }
