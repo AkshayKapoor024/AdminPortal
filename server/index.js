@@ -6,6 +6,8 @@ require('dotenv').config()
 
 // Start date label update cron job
 require('./jobs/dateStatusJob')
+// Start daily CAMS ingestion cron job
+require('./jobs/camsIngestionJob')
 
 const session = require('express-session')
 const cookieParser = require('cookie-parser')

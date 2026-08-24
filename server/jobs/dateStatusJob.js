@@ -17,7 +17,7 @@ cron.schedule('0 8 * * *', async () => {
         })
 
         // update task
-        for (task of tasks) {
+        for (const task of tasks) {
             const label = getDateLabel(task.dueDate)
 
             await prisma.task.update({
@@ -41,7 +41,7 @@ cron.schedule('0 8 * * *', async () => {
 
         // update lead
         for (lead of leads) {
-            const label = getDateLabel(task.follow_up_date)
+            const label = getDateLabel(lead.follow_up_date)
 
             await prisma.lead.update({
                 where: {

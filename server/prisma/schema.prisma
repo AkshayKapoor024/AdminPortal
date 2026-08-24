@@ -58,3 +58,131 @@ model Lead {
 
   user User @relation(fields: [primary_user], references: [email], onDelete: Cascade)
 }
+
+enum CamsReportStatus {
+  RECEIVED
+  PARSED
+  STORED
+  SKIPPED
+  FAILED
+}
+
+model CamsReport {
+  id                    String            @id @default(uuid(7))
+  messageId             String?           @unique
+  identifierFingerprint String            @unique
+  reportRequestNumber   String?
+  reportNumber          String?
+  dispatchDateTime      DateTime?
+  toEmail               String?
+  status                CamsReportStatus
+  error                 String?
+  transactionCount      Int               @default(0)
+  processingAttempts    Int               @default(1)
+  parsedAt              DateTime?
+  storedAt              DateTime?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+
+  transactions CamsTransaction[]
+
+  @@index([reportRequestNumber])
+  @@index([dispatchDateTime])
+  @@map("cams_reports")
+}
+
+model CamsTransaction {
+  id          String     @id @default(uuid(7))
+  reportId    String
+  fingerprint String
+  createdAt   DateTime   @default(now())
+
+  report CamsReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  amcCode             String?
+  folioNo             String?
+  prodcode            String?
+  scheme              String?
+  invName             String?
+  trxntype            String?
+  trxnno              String?
+  trxnmode            String?
+  trxnstat            String?
+  usercode            String?
+  usrtrxno            String?
+  traddate            String?
+  postdate            String?
+  purprice            String?
+  units               String?
+  amount              String?
+  brokcode            String?
+  subbrok             String?
+  brokperc            String?
+  brokcomm            String?
+  altfolio            String?
+  repDate             String?
+  time1               String?
+  trxnsubtyp          String?
+  applicationNo       String?
+  trxnNature          String?
+  tax                 String?
+  totalTax            String?
+  te15h               String?
+  micrNo              String?
+  remarks             String?
+  swflag              String?
+  oldFolio            String?
+  seqNo               String?
+  reinvestFlag        String?
+  multBrok            String?
+  stt                 String?
+  location            String?
+  schemeType          String?
+  taxStatus           String?
+  load                String?
+  scanrefno           String?
+  pan                 String?
+  invIin              String?
+  targSrcScheme       String?
+  trxnTypeFlag        String?
+  ticobTrtype         String?
+  ticobTrno           String?
+  ticobPostedDate     String?
+  dpId                String?
+  trxnCharges         String?
+  eligibAmt           String?
+  srcOfTxn            String?
+  trxnSuffix          String?
+  siptrxnno           String?
+  terLocation         String?
+  euin                String?
+  euinValid           String?
+  euinOpted           String?
+  subBrkArn           String?
+  exchDcFlag          String?
+  srcBrkCode          String?
+  sysRegnDate         String?
+  acNo                String?
+  bankName            String?
+  reversalCode        String?
+  exchangeFlag        String?
+  caInitiatedDate     String?
+  gstStateCode        String?
+  igstAmount          String?
+  cgstAmount          String?
+  sgstAmount          String?
+  revRemark           String?
+  originalTrxnno      String?
+  stampDuty           String?
+  folioOld            String?
+  schemeFolioNumber   String?
+  amcRefNo            String?
+  requestRefNo        String?
+  transmissionFlag    String?
+
+  @@unique([reportId, fingerprint])
+  @@index([folioNo])
+  @@index([pan])
+  @@index([trxnno])
+  @@map("cams_transactions")
+}
