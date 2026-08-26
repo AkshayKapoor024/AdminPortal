@@ -12,31 +12,40 @@ const { ImapFlow } = require("imapflow");
 const { simpleParser } = require("mailparser");
 const fs = require("fs/promises");
 
-const {
-    processSingleReport,
-    processCamsReports,
-} = require("./reportService");
-
 // -----------------------------------------------------------------------------
 // Gmail IMAP client
 // -----------------------------------------------------------------------------
 
-const client = new ImapFlow({
-    host: process.env.GMAIL_IMAP_HOST,
-    port: Number(process.env.GMAIL_IMAP_PORT),
-    secure: true,
+function createImapClient() {
+    return new ImapFlow({
+        host: process.env.GMAIL_IMAP_HOST,
+        port: Number(process.env.GMAIL_IMAP_PORT),
+        secure: true,
 
-    auth: {
-        user: process.env.GMAIL_IMAP_USER,
-        pass: process.env.GMAIL_IMAP_PASSWORD,
-    },
-});
+        // ImapFlow uses a verbose pino logger by default. The service itself
+        // controls application-level diagnostics, so disable library logs.
+        logger: false,
+
+        auth: {
+            user: process.env.GMAIL_IMAP_USER,
+            pass: process.env.GMAIL_IMAP_PASSWORD,
+        },
+    });
+}
 
 // -----------------------------------------------------------------------------
 // CAMS subject matcher
 // -----------------------------------------------------------------------------
 
 const CAMS_SUBJECT_REGEX = /Investor\s+Transactions\s+for\s+a\s+Period/i;
+
+// Only these approved CAMS report requests may enter the ingestion pipeline.
+const APPROVED_REPORT_REQUEST_NUMBERS = new Set([
+    "221744453R2",
+    "221743797R2",
+    "221744323R2",
+    "221744277R2",
+]);
 
 // -----------------------------------------------------------------------------
 // Helpers
@@ -560,6 +569,9 @@ function parseCamsEmail(parsed, rawSource) {
 
 async function retrieveCamsEmails() {
     const emails = [];
+    // ImapFlow instances cannot be reused after logout; cron/manual retries
+    // must receive a fresh connection.
+    const client = createImapClient();
 
     let matchedCount = 0;
     let urlCount = 0;
@@ -703,22 +715,6 @@ async function retrieveCamsEmails() {
                         hasDownloadField ||
                         hasZipUrl
                     ) {
-                        console.warn(
-                            "⚠️ CAMS URL extraction failed:",
-                            {
-                                requestNumber:
-                                    normalizedEmail.requestNumber,
-
-                                reportRequestNumber:
-                                    normalizedEmail.reportRequestNumber,
-
-                                messageId:
-                                    normalizedEmail.messageId,
-
-                                hasDownloadField,
-                                hasZipUrl,
-                            }
-                        );
                     }
                 }
 
@@ -732,24 +728,23 @@ async function retrieveCamsEmails() {
 
         await client.logout();
 
+        // Apply the business allow-list after retrieval, before any report is
+        // written or returned to the extraction/CSV/database pipeline.
+        const approvedEmails = emails.filter((email) =>
+            APPROVED_REPORT_REQUEST_NUMBERS.has(email.reportRequestNumber)
+        );
+
         // ---------------------------------------------------------------------
         // Print unique CAMS report request numbers.
         // ---------------------------------------------------------------------
         const uniqueReportRequestNumbers = [
             ...new Set(
-                emails
+                approvedEmails
                     .map((email) => email.reportRequestNumber)
                     .filter(Boolean)
             ),
         ];
 
-        console.log(
-            `\nUnique CAMS Report Request Numbers (${uniqueReportRequestNumbers.length}):`
-        );
-
-        for (const reportRequestNumber of uniqueReportRequestNumbers) {
-            console.log(`- ${reportRequestNumber}`);
-        }
 
         // ---------------------------------------------------------------------
         // Save result.
@@ -761,7 +756,7 @@ async function retrieveCamsEmails() {
         await fs.writeFile(
             outputPath,
             JSON.stringify(
-                emails,
+                approvedEmails,
                 null,
                 4
             ),
@@ -772,28 +767,14 @@ async function retrieveCamsEmails() {
         // Minimal parsing summary.
         // ---------------------------------------------------------------------
 
-        console.log(
-            `CAMS parsing complete: ${matchedCount} matched, ` +
-            `${urlCount} URLs found, ` +
-            `${noUrlCount} without URLs.`
-        );
-
-        console.log(
-            `Saved ${emails.length} reports to ${outputPath}`
-        );
 
         // ---------------------------------------------------------------------
         // Return same array.
         // ---------------------------------------------------------------------
 
-        return emails;
+        return approvedEmails;
 
     } catch (error) {
-        console.error(
-            "CAMS email retrieval failed:",
-            error.message
-        );
-
         try {
             await client.logout();
         } catch (_) {

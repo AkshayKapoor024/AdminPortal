@@ -26,8 +26,33 @@ const TEMP_ROOT = path.join(
     "cams-reports"
 );
 
-const SEVEN_ZIP_PATH =
-    process.env.CAMS_7ZIP_PATH || "7z";
+const SEVEN_ZIP_PATH = process.env.CAMS_7ZIP_PATH || null;
+
+/**
+ * Resolve a non-interactive archive extractor. CAMS_REPORT_PASSWORD remains
+ * the only password source; this only chooses the installed executable.
+ */
+async function resolveArchiveExtractor() {
+    const candidates = [
+        SEVEN_ZIP_PATH && { executable: SEVEN_ZIP_PATH, type: "7zip" },
+        { executable: "C:\\Program Files\\7-Zip\\7z.exe", type: "7zip" },
+        { executable: "C:\\Program Files (x86)\\7-Zip\\7z.exe", type: "7zip" },
+    ].filter(Boolean);
+
+    for (const candidate of candidates) {
+        try {
+            await fs.access(candidate.executable);
+            return candidate;
+        } catch (_) {
+            // Try the next standard installation path.
+        }
+    }
+
+    throw new CustomError(
+        500,
+        "No supported archive extractor was found. Install 7-Zip or set CAMS_7ZIP_PATH."
+    );
+}
 
 // ---------------------------------------------------------------------
 // Helper functions
@@ -280,21 +305,35 @@ async function extractReport(
     }
 
     try {
+        const extractor = await resolveArchiveExtractor();
+        const argumentsForExtractor = [
+            "x",
+            zipPath,
+            `-o${outputDirectory}`,
+            `-p${password}`,
+            "-y",
+        ];
+
         await execFileAsync(
-            SEVEN_ZIP_PATH,
-            [
-                "x",
-                zipPath,
-                `-o${outputDirectory}`,
-                `-p${password}`,
-                "-y",
-            ],
+            extractor.executable,
+            argumentsForExtractor,
             {
                 windowsHide: true,
                 maxBuffer: 10 * 1024 * 1024,
             }
         );
     } catch (error) {
+        if (error instanceof CustomError) {
+            throw error;
+        }
+
+        if (error.code === "ENOENT") {
+            throw new CustomError(
+                500,
+                "CAMS archive extractor could not be started. Set CAMS_7ZIP_PATH to a valid 7z.exe path."
+            );
+        }
+
         // Do not expose the password or raw 7-Zip output.
         throw new CustomError(
             422,
@@ -468,35 +507,19 @@ async function processSingleReport(
         // Download ZIP
         // -----------------------------------------------------------
 
-        console.log(
-            `⬇️ Downloading CAMS report ${report.reportRequestNumber}`
-        );
-
         await downloadReport(
             report.downloadUrl,
             zipPath
-        );
-
-        console.log(
-            `📦 Downloaded CAMS report: ${zipPath}`
         );
 
         // -----------------------------------------------------------
         // Extract ZIP
         // -----------------------------------------------------------
 
-        console.log(
-            `🔓 Extracting CAMS report ${report.reportRequestNumber}`
-        );
-
         await extractReport(
             zipPath,
             tempDirectory,
             password
-        );
-
-        console.log(
-            "✅ CAMS report extracted successfully"
         );
 
         // -----------------------------------------------------------
@@ -507,10 +530,6 @@ async function processSingleReport(
             await findCsvFile(
                 tempDirectory
             );
-
-        console.log(
-            `📄 CSV found: ${csvPath}`
-        );
 
         // -----------------------------------------------------------
         // Successful result
@@ -535,10 +554,6 @@ async function processSingleReport(
             error instanceof CustomError
                 ? error.message
                 : `Failed to process CAMS report ${report.reportRequestNumber}: ${error.message}`;
-
-        console.error(
-            `❌ Failed to process CAMS report ${report.reportRequestNumber}: ${errorMessage}`
-        );
 
         return buildReportResult({
             report,

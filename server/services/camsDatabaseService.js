@@ -6,32 +6,8 @@
  * and return explicit STORED, SKIPPED, or FAILED outcomes. No raw JSON is stored.
  */
 const { prisma } = require("../init/prisma");
-const { reportFingerprint, transactionData, transactionFingerprint, validDate } = require("../utils/camsPersistence");
-
-function reportData(report, status, error, count = 0) {
-    const identifiers = report.identifiers || {};
-    return {
-        messageId: identifiers.messageId || null,
-        identifierFingerprint: reportFingerprint(identifiers),
-        reportRequestNumber: identifiers.reportRequestNumber || null,
-        reportNumber: identifiers.reportNumber || null,
-        dispatchDateTime: validDate(identifiers.dispatchDateTime),
-        toEmail: identifiers.toEmail || null,
-        status,
-        error: error || null,
-        transactionCount: count,
-        parsedAt: status === "PARSED" || status === "STORED" ? new Date() : null,
-        storedAt: status === "STORED" ? new Date() : null,
-    };
-}
-
-async function findExistingReport(tx, data) {
-    if (data.messageId) {
-        const byMessageId = await tx.camsReport.findUnique({ where: { messageId: data.messageId } });
-        if (byMessageId) return byMessageId;
-    }
-    return tx.camsReport.findUnique({ where: { identifierFingerprint: data.identifierFingerprint } });
-}
+const { transactionData, transactionFingerprint } = require("../utils/camsPersistence");
+const { buildReportData, findExistingCamsReport } = require("../utils/camsReportPersistence");
 
 async function persistCamsReport(report) {
     const suppliedRecords = Array.isArray(report?.records) ? report.records : [];
@@ -50,11 +26,16 @@ async function persistCamsReport(report) {
     const error = targetStatus !== "STORED"
         ? (report?.error || (isEmptyParsedReport ? "CAMS CSV contains no transaction records" : "CAMS report was not parsed successfully"))
         : null;
-    const data = reportData(report || {}, targetStatus, error, records.length);
+    const data = buildReportData(report || {}, targetStatus, error, records.length);
 
     return prisma.$transaction(async (tx) => {
-        const existing = await findExistingReport(tx, data);
-        if (existing?.status === "STORED") return { ...existing, outcome: "SKIPPED" };
+        const existing = await findExistingCamsReport(tx, data);
+        // Normal cron retries skip an already stored report. A count mismatch
+        // signals an earlier incomplete/incorrect parse, so rebuild that one
+        // report atomically instead of preserving partial transaction data.
+        if (existing?.status === "STORED" && existing.transactionCount === records.length) {
+            return { ...existing, outcome: "SKIPPED" };
+        }
 
         if (targetStatus !== "STORED") {
             const completed = existing

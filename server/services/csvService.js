@@ -10,6 +10,7 @@ const fs = require("fs");
 const { Transform } = require("stream");
 const { parse } = require("csv-parse");
 const CustomError = require("../utils/customError");
+const { CAMS_TRANSACTION_FIELDS } = require("../utils/camsPersistence");
 
 // ---------------------------------------------------------------------
 // CAMS CSV configuration
@@ -24,6 +25,7 @@ const CustomError = require("../utils/customError");
  * character instead of the default double quote.
  */
 const CAMS_CSV_QUOTE = "'";
+const CAMS_CSV_HEADERS = Object.keys(CAMS_TRANSACTION_FIELDS);
 
 // ---------------------------------------------------------------------
 // Helper functions
@@ -209,6 +211,22 @@ function createCamsQuoteNormalizer() {
 }
 
 /**
+ * CAMS occasionally supplies a data-only CSV with no header row. Inspect only
+ * the beginning of the file and fall back to the known 80-column CAMS schema.
+ */
+async function hasCamsHeaderRow(csvPath) {
+    const handle = await fs.promises.open(csvPath, "r");
+    try {
+        const buffer = Buffer.alloc(16 * 1024);
+        const { bytesRead } = await handle.read(buffer, 0, buffer.length, 0);
+        const firstLine = buffer.subarray(0, bytesRead).toString("utf8").split(/\r?\n/, 1)[0];
+        return /(?:^|,)\s*'?AMC_CODE'?\s*,/i.test(firstLine) && /'?FOLIO_NO'?/i.test(firstLine);
+    } finally {
+        await handle.close();
+    }
+}
+
+/**
  * Parse a single CAMS CSV file into an array of transaction objects.
  *
  * The first CSV row is treated as the header row and every subsequent
@@ -237,6 +255,7 @@ function createCamsQuoteNormalizer() {
  */
 async function parseCsvFile(csvPath) {
     await validateCsvFile(csvPath);
+    const hasHeaderRow = await hasCamsHeaderRow(csvPath);
 
     return new Promise((resolve, reject) => {
         const records = [];
@@ -271,7 +290,7 @@ async function parseCsvFile(csvPath) {
              * construct objects.
              */
             const parser = parse({
-                columns: (headers) => {
+                columns: hasHeaderRow ? (headers) => {
                     if (!headers || headers.length === 0) {
                         throw new Error(
                             "CAMS CSV does not contain a header row"
@@ -281,7 +300,7 @@ async function parseCsvFile(csvPath) {
                     return headers.map(
                         normalizeColumnName
                     );
-                },
+                } : CAMS_CSV_HEADERS,
 
                 /*
                  * CAMS encloses fields using single quotes rather than
@@ -451,18 +470,10 @@ async function processCsvReport(report) {
             report.identifiers?.reportRequestNumber ||
             "unknown";
 
-        console.log(
-            `📄 Parsing CAMS CSV for report ${reportRequestNumber}`
-        );
-
         const records =
             await parseCsvFile(
                 report.paths.csvPath
             );
-
-        console.log(
-            `✅ Parsed ${records.length} CAMS transaction records from ${reportRequestNumber}`
-        );
 
         return {
             identifiers: {
@@ -490,13 +501,6 @@ async function processCsvReport(report) {
             error instanceof CustomError
                 ? error.message
                 : `Failed to process CAMS CSV: ${error.message}`;
-
-        console.error(
-            `❌ Failed to parse CAMS CSV for report ${
-                report.identifiers?.reportRequestNumber ||
-                "unknown"
-            }: ${errorMessage}`
-        );
 
         return {
             identifiers: {
@@ -559,10 +563,6 @@ async function processCamsCsvReports(reports) {
                 error instanceof CustomError
                     ? error.message
                     : `Failed to process CAMS CSV report: ${error.message}`;
-
-            console.error(
-                `❌ CAMS CSV processing failed: ${errorMessage}`
-            );
 
             /*
              * Preserve the report even if an unexpected error occurs.
