@@ -68,21 +68,21 @@ enum CamsReportStatus {
 }
 
 model CamsReport {
-  id                    String            @id @default(uuid(7))
-  messageId             String?           @unique
-  identifierFingerprint String            @unique
+  id                    String           @id @default(uuid(7))
+  messageId             String?          @unique
+  identifierFingerprint String           @unique
   reportRequestNumber   String?
   reportNumber          String?
   dispatchDateTime      DateTime?
   toEmail               String?
   status                CamsReportStatus
   error                 String?
-  transactionCount      Int               @default(0)
-  processingAttempts    Int               @default(1)
+  transactionCount      Int              @default(0)
+  processingAttempts    Int              @default(1)
   parsedAt              DateTime?
   storedAt              DateTime?
-  createdAt             DateTime          @default(now())
-  updatedAt             DateTime          @updatedAt
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
 
   transactions CamsTransaction[]
 
@@ -92,97 +92,295 @@ model CamsReport {
 }
 
 model CamsTransaction {
-  id          String     @id @default(uuid(7))
+  id          String   @id @default(uuid(7))
   reportId    String
   fingerprint String
-  createdAt   DateTime   @default(now())
+  createdAt   DateTime @default(now())
 
   report CamsReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
 
-  amcCode             String?
-  folioNo             String?
-  prodcode            String?
-  scheme              String?
-  invName             String?
-  trxntype            String?
-  trxnno              String?
-  trxnmode            String?
-  trxnstat            String?
-  usercode            String?
-  usrtrxno            String?
-  traddate            String?
-  postdate            String?
-  purprice            String?
-  units               String?
-  amount              String?
-  brokcode            String?
-  subbrok             String?
-  brokperc            String?
-  brokcomm            String?
-  altfolio            String?
-  repDate             String?
-  time1               String?
-  trxnsubtyp          String?
-  applicationNo       String?
-  trxnNature          String?
-  tax                 String?
-  totalTax            String?
-  te15h               String?
-  micrNo              String?
-  remarks             String?
-  swflag              String?
-  oldFolio            String?
-  seqNo               String?
-  reinvestFlag        String?
-  multBrok            String?
-  stt                 String?
-  location            String?
-  schemeType          String?
-  taxStatus           String?
-  load                String?
-  scanrefno           String?
-  pan                 String?
-  invIin              String?
-  targSrcScheme       String?
-  trxnTypeFlag        String?
-  ticobTrtype         String?
-  ticobTrno           String?
-  ticobPostedDate     String?
-  dpId                String?
-  trxnCharges         String?
-  eligibAmt           String?
-  srcOfTxn            String?
-  trxnSuffix          String?
-  siptrxnno           String?
-  terLocation         String?
-  euin                String?
-  euinValid           String?
-  euinOpted           String?
-  subBrkArn           String?
-  exchDcFlag          String?
-  srcBrkCode          String?
-  sysRegnDate         String?
-  acNo                String?
-  bankName            String?
-  reversalCode        String?
-  exchangeFlag        String?
-  caInitiatedDate     String?
-  gstStateCode        String?
-  igstAmount          String?
-  cgstAmount          String?
-  sgstAmount          String?
-  revRemark           String?
-  originalTrxnno      String?
-  stampDuty           String?
-  folioOld            String?
-  schemeFolioNumber   String?
-  amcRefNo            String?
-  requestRefNo        String?
-  transmissionFlag    String?
+  amcCode           String?
+  folioNo           String?
+  prodcode          String?
+  scheme            String?
+  invName           String?
+  trxntype          String?
+  trxnno            String?
+  trxnmode          String?
+  trxnstat          String?
+  usercode          String?
+  usrtrxno          String?
+  traddate          String?
+  postdate          String?
+  purprice          String?
+  units             String?
+  amount            String?
+  brokcode          String?
+  subbrok           String?
+  brokperc          String?
+  brokcomm          String?
+  altfolio          String?
+  repDate           String?
+  time1             String?
+  trxnsubtyp        String?
+  applicationNo     String?
+  trxnNature        String?
+  tax               String?
+  totalTax          String?
+  te15h             String?
+  micrNo            String?
+  remarks           String?
+  swflag            String?
+  oldFolio          String?
+  seqNo             String?
+  reinvestFlag      String?
+  multBrok          String?
+  stt               String?
+  location          String?
+  schemeType        String?
+  taxStatus         String?
+  load              String?
+  scanrefno         String?
+  pan               String?
+  invIin            String?
+  targSrcScheme     String?
+  trxnTypeFlag      String?
+  ticobTrtype       String?
+  ticobTrno         String?
+  ticobPostedDate   String?
+  dpId              String?
+  trxnCharges       String?
+  eligibAmt         String?
+  srcOfTxn          String?
+  trxnSuffix        String?
+  siptrxnno         String?
+  terLocation       String?
+  euin              String?
+  euinValid         String?
+  euinOpted         String?
+  subBrkArn         String?
+  exchDcFlag        String?
+  srcBrkCode        String?
+  sysRegnDate       String?
+  acNo              String?
+  bankName          String?
+  reversalCode      String?
+  exchangeFlag      String?
+  caInitiatedDate   String?
+  gstStateCode      String?
+  igstAmount        String?
+  cgstAmount        String?
+  sgstAmount        String?
+  revRemark         String?
+  originalTrxnno    String?
+  stampDuty         String?
+  folioOld          String?
+  schemeFolioNumber String?
+  amcRefNo          String?
+  requestRefNo      String?
+  transmissionFlag  String?
 
   @@unique([reportId, fingerprint])
   @@index([folioNo])
   @@index([pan])
   @@index([trxnno])
   @@map("cams_transactions")
+}
+
+// ============================================================================
+// AUM PERIOD
+// Represents a financial reporting period/quarter.
+// Example: FY 2025-26, Q4 = Jan-Mar 2026
+// ============================================================================
+
+model AumPeriod {
+  id              String   @id @default(uuid(7))
+
+  financialYear   String   @map("financial_year") // "2025-26"
+  quarter         Int                              // 1, 2, 3, 4
+
+  periodStart     DateTime @map("period_start") @db.Date
+  periodEnd       DateTime @map("period_end") @db.Date
+
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  industryAums    IndustryAum[]
+  companyAums     CompanyAum[]
+  imports         AumImport[]
+
+  @@unique([financialYear, quarter])
+  @@index([periodEnd])
+  @@map("aum_periods")
+}
+
+
+// ============================================================================
+// AUM CATEGORY
+// Stores the complete hierarchical AMFI category structure.
+//
+// Example:
+//
+// Open Ended Schemes
+//   └── Income/Debt Oriented Schemes
+//       └── Liquid/Cash Oriented Schemes
+//           └── Overnight Fund
+//
+// parentId creates the hierarchy.
+// ============================================================================
+
+model AumCategory {
+  id              String   @id @default(uuid(7))
+
+  code            String   @unique
+  name            String
+
+  level           Int
+  isLeaf          Boolean  @default(false) @map("is_leaf")
+
+  parentId        String?  @map("parent_id")
+
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Self-referencing hierarchy
+  parent          AumCategory?  @relation("AumCategoryHierarchy", fields: [parentId], references: [id])
+  children        AumCategory[] @relation("AumCategoryHierarchy")
+
+  // Data
+  industryAums    IndustryAum[]
+  companyAums     CompanyAum[]
+
+  @@index([parentId])
+  @@index([level])
+  @@map("aum_categories")
+}
+
+
+// ============================================================================
+// INDUSTRY AUM
+// Stores AMFI industry-level AUM / AAUM observations.
+//
+// One row = one category for one reporting period.
+//
+// Example:
+// 2025-26 Q4 + Large Cap Fund
+// AUM  = 366045.486
+// AAUM = 405314.494
+// ============================================================================
+
+model IndustryAum {
+  id              String   @id @default(uuid(7))
+
+  periodId        String   @map("period_id")
+  categoryId      String   @map("category_id")
+
+  aum             Decimal  @db.Decimal(20, 4)
+  aaum            Decimal  @db.Decimal(20, 4)
+
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  period          AumPeriod   @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  category        AumCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@unique([periodId, categoryId])
+  @@index([categoryId])
+  @@index([periodId])
+  @@map("industry_aum")
+}
+
+
+// ============================================================================
+// COMPANY AUM
+// Stores organization-specific AUM / AAUM observations.
+//
+// Uses the SAME AumCategory and AumPeriod tables as IndustryAum.
+//
+// This is critical because it allows direct industry-vs-company comparison.
+// ============================================================================
+
+model CompanyAum {
+  id              String   @id @default(uuid(7))
+
+  periodId        String   @map("period_id")
+  categoryId      String   @map("category_id")
+
+  aum             Decimal  @db.Decimal(20, 4)
+  aaum            Decimal  @db.Decimal(20, 4)
+
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  period          AumPeriod   @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  category        AumCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@unique([periodId, categoryId])
+  @@index([categoryId])
+  @@index([periodId])
+  @@map("company_aum")
+}
+
+
+// ============================================================================
+// AUM IMPORT
+// Tracks ingestion of AMFI/company files.
+//
+// This table is NOT the financial data itself.
+// It tells us whether a particular source file/period was discovered,
+// downloaded and successfully processed.
+// ============================================================================
+
+model AumImport {
+  id              String   @id @default(uuid(7))
+
+  source          AumImportSource
+  periodId        String   @map("period_id")
+
+  fileUrl         String?  @map("file_url")
+  fileName        String?  @map("file_name")
+
+  status          AumImportStatus @default(PENDING)
+
+  startedAt       DateTime? @map("started_at")
+  completedAt     DateTime? @map("completed_at")
+
+  errorMessage    String?  @map("error_message")
+
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  // Relation
+  period          AumPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+
+  @@unique([source, periodId])
+  @@index([periodId])
+  @@index([source, status])
+  @@map("aum_imports")
+}
+
+
+// ============================================================================
+// IMPORT SOURCE
+// ============================================================================
+
+enum AumImportSource {
+  AMFI
+  COMPANY
+}
+
+
+// ============================================================================
+// IMPORT STATUS
+// ============================================================================
+
+enum AumImportStatus {
+  PENDING
+  DOWNLOADING
+  PROCESSING
+  COMPLETED
+  FAILED
 }
