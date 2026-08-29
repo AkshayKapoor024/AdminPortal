@@ -1,3 +1,17 @@
+/**
+ * Turn a date into a friendly, human-readable label.
+ *
+ * Used for both task due-dates and lead follow-up dates, this compares
+ * the given date to "today" (with the time portion ignored, so only the
+ * calendar day matters) and returns:
+ *   - "Expired"   if the date is in the past
+ *   - "Today"     if the date is today
+ *   - "Tomorrow"  if the date is tomorrow
+ *   - otherwise, a short "DD Mon" formatted date (e.g. "05 Mar")
+ *
+ * @param {string|Date} date
+ * @returns {string} the label to display in the UI
+ */
 function getDateLabel(date) {
     const target = new Date(date)
 

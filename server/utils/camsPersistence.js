@@ -32,19 +32,28 @@ const CAMS_TRANSACTION_FIELDS = {
     TRANSMISSION_FLAG: "transmissionFlag",
 };
 
+/** Hash a string with SHA-256, used to build short, stable fingerprints. */
 function sha256(value) {
     return crypto.createHash("sha256").update(value).digest("hex");
 }
 
+/** Turn null/undefined into an empty string and trim everything else, so fingerprints are stable. */
 function canonicalize(value) {
     return value === null || value === undefined ? "" : String(value).trim();
 }
 
+/**
+ * Build a stable fingerprint identifying one report, from its CAMS
+ * identifiers. Two reports with the same identifiers always produce the
+ * same fingerprint, which is what lets the database service recognise
+ * "we've already seen this report before".
+ */
 function reportFingerprint(identifiers = {}) {
     return sha256(["messageId", "reportRequestNumber", "reportNumber", "dispatchDateTime", "toEmail"]
         .map((key) => `${key}=${canonicalize(identifiers[key])}`).join("|"));
 }
 
+/** Map one CSV transaction record's fields onto their Prisma column names. */
 function transactionData(record) {
     const data = {};
     for (const [csvField, prismaField] of Object.entries(CAMS_TRANSACTION_FIELDS)) {
@@ -53,11 +62,16 @@ function transactionData(record) {
     return data;
 }
 
+/**
+ * Build a stable fingerprint identifying one transaction row, from all of
+ * its CAMS field values. Used to silently drop exact-duplicate rows.
+ */
 function transactionFingerprint(record) {
     return sha256(Object.keys(CAMS_TRANSACTION_FIELDS)
         .map((csvField) => `${csvField}=${canonicalize(record[csvField])}`).join("|"));
 }
 
+/** Safely convert a value to a Date, returning null instead of an invalid date. */
 function validDate(value) {
     if (!value) return null;
     const date = new Date(value);

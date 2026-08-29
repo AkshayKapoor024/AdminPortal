@@ -1,3 +1,10 @@
+/**
+ * Leads controller.
+ *
+ * CRUD operations for "Lead" records (prospective clients), including
+ * attaching uploaded supporting documents via multer and linking each
+ * lead to the admin user (`primary_user`) who owns it.
+ */
 const { prisma } = require('./init/prisma')
 
 module.exports.create = async (req, res) => {

@@ -1,3 +1,9 @@
+/**
+ * Joi validation schema for a signup (new admin user) request.
+ *
+ * Used by `middlewares/middleware.js` (`SignupValidate`) to check the
+ * request body before a new user account is created.
+ */
 const joi = require('joi')
 
 module.exports = new joi.object({

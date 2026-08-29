@@ -1,3 +1,10 @@
+/**
+ * Authentication controller.
+ *
+ * Handles admin user signup, login, logout, and basic user lookups.
+ * Passwords are always hashed with bcrypt before being stored, and are
+ * always stripped out of any user object sent back in a response.
+ */
 
 const { prisma } = require('./init/prisma')
 const bcrypt = require('bcrypt')

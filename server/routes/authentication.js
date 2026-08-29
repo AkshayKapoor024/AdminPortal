@@ -1,3 +1,8 @@
+// Authentication routes: signup, login, logout, and user lookups.
+// Each route runs its Joi validation middleware (where applicable) and
+// `isAuthenticated` (where the route requires a logged-in session)
+// before reaching the controller, via `wrapAsync` so any thrown/rejected
+// error is forwarded to Express's error handler.
 // Dependencies 
 const express = require('express')
 

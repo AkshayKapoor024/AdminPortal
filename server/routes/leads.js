@@ -1,3 +1,6 @@
+// Lead routes: create/update/list/fetch/delete a lead.
+// `multer` handles any uploaded supporting documents before the request
+// reaches validation and the controller.
 // Dependencies 
 const express = require('express')
 

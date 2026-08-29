@@ -1,3 +1,9 @@
+// Application entry point.
+//
+// This file wires together the Express app: middleware (body parsing,
+// CORS, cookies, sessions), the background cron jobs, and the three
+// route groups (auth, tasks, leads). Run this file to start the server.
+
 // Dependencies 
 const express = require('express')
 const app = express()

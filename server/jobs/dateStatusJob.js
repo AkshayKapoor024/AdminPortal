@@ -1,3 +1,6 @@
+// Daily cron job that keeps task/lead "status label" fields (Expired,
+// Today, Tomorrow, or a formatted date) in sync with the current date,
+// so the admin UI doesn't have to recompute this on every page load.
 const cron = require('node-cron')
 const { prisma } = require('../init/prisma')
 const getDateLabel = require('../utils/date_processor')
@@ -7,7 +10,8 @@ const getDateLabel = require('../utils/date_processor')
 cron.schedule('0 8 * * *', async () => {
     try {
 
-        // get all tasks
+        // get all tasks that are not already marked "Expired"
+        // (once a task is Expired, its label never needs to change again)
         const tasks = await prisma.task.findMany({
             where: {
                 dueDateLabel: {
@@ -30,7 +34,7 @@ cron.schedule('0 8 * * *', async () => {
             })
         }
 
-        // Get all leads
+        // Get all leads that are not already marked "Expired"
         const leads = await prisma.lead.findMany({
             where: {
                 follow_up_label: {

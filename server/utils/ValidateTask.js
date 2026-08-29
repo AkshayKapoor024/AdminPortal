@@ -1,3 +1,9 @@
+/**
+ * Joi validation schema for a "Task" record.
+ *
+ * Used by `middlewares/middleware.js` (`TaskValidate`) to check the
+ * request body before a task is created or updated.
+ */
 const joi = require('joi')
 
 module.exports = new joi.object({

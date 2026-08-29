@@ -1,3 +1,10 @@
+/**
+ * Joi validation schema for a "Lead" record.
+ *
+ * Used by `middlewares/middleware.js` (`LeadValidate`) to check the
+ * request body before a lead is created or updated, so bad/incomplete
+ * data never reaches the database layer.
+ */
 const joi = require('joi')
 
 module.exports = new joi.object({
@@ -18,4 +25,3 @@ module.exports = new joi.object({
     primary_user:joi.string().required()
 
 })
-

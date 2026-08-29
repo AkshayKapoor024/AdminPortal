@@ -1,3 +1,9 @@
+/**
+ * Tasks controller.
+ *
+ * CRUD operations for "Task" records, each linked to a client and an
+ * assigned admin user.
+ */
 const { prisma } = require('./init/prisma')
 
 module.exports.create = async (req, res) => {
