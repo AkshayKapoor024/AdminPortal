@@ -14,6 +14,8 @@ require('dotenv').config()
 require('./jobs/dateStatusJob')
 // Start daily CAMS ingestion cron job
 require('./jobs/camsIngestionJob')
+// Start monthly AMFI industry AUM ingestion cron job
+require('./jobs/amfiIngestionJob')
 
 const session = require('express-session')
 const cookieParser = require('cookie-parser')
