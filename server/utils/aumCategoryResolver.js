@@ -146,7 +146,7 @@ async function createCategoryResolver(prisma) {
         stats.created++;
 
         console.log(
-            `[AMFI] New AumCategory discovered and created: "${name.trim()}" ` +
+            `[AumCategory] New category discovered and created: "${name.trim()}" ` +
             `(code=${code}, level=${level}, isLeaf=${isLeaf}, parentId=${parentId || "none"})`
         );
 

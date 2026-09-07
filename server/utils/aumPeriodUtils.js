@@ -86,7 +86,58 @@ async function findOrCreateAumPeriod(prisma, fyId, quarter) {
     });
 }
 
+/**
+ * Determine which financial year + quarter an arbitrary calendar date
+ * falls into. This is the reverse of `resolveQuarterDates`: given a
+ * date (e.g. from a company file-upload API payload), work out its
+ * "2025-26" / quarter-2 identity.
+ *
+ * India's financial year runs 1 April - 31 March, so a date in
+ * January-March belongs to Q4 of the financial year that *started* the
+ * previous calendar year.
+ *
+ * @param {string|Date} date
+ * @returns {{financialYear: string, quarter: number}}
+ */
+function getFinancialYearAndQuarterForDate(date) {
+    const parsed = new Date(date);
+
+    if (Number.isNaN(parsed.getTime())) {
+        throw new Error(`Invalid date: "${date}"`);
+    }
+
+    const month = parsed.getUTCMonth() + 1; // 1-12
+    const calendarYear = parsed.getUTCFullYear();
+
+    let startYear;
+    let quarter;
+
+    if (month >= 4 && month <= 6) {
+        startYear = calendarYear;
+        quarter = 1;
+    } else if (month >= 7 && month <= 9) {
+        startYear = calendarYear;
+        quarter = 2;
+    } else if (month >= 10 && month <= 12) {
+        startYear = calendarYear;
+        quarter = 3;
+    } else {
+        // January - March: belongs to the financial year that started
+        // the previous calendar year.
+        startYear = calendarYear - 1;
+        quarter = 4;
+    }
+
+    const endYearSuffix = String((startYear + 1) % 100).padStart(2, "0");
+
+    return {
+        financialYear: `${startYear}-${endYearSuffix}`,
+        quarter,
+    };
+}
+
 module.exports = {
     resolveQuarterDates,
     findOrCreateAumPeriod,
+    getFinancialYearAndQuarterForDate,
 };

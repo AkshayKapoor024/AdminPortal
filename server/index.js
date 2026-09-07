@@ -23,6 +23,7 @@ const cookieParser = require('cookie-parser')
 const authRouter = require('./routes/authentication')
 const taskRouter = require('./routes/tasks')
 const leadRouter = require('./routes/leads')
+const companyAumRouter = require('./routes/companyAum')
 
 const cors = require('cors')
 
@@ -68,6 +69,9 @@ app.use('/api/task', taskRouter)
 
 // Lead apis
 app.use('/api/lead', leadRouter)
+
+// Company AUM import apis
+app.use('/api/company-aum', companyAumRouter)
 
 app.listen(port, () => {
     console.log(`App listening at port http://localhost:${port}`)

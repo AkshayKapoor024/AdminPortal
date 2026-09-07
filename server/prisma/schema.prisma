@@ -209,6 +209,7 @@ model AumPeriod {
   industryAums    IndustryAum[]
   companyAums     CompanyAum[]
   imports         AumImport[]
+  companyAumFileImports CompanyAumFileImport[]
 
   @@unique([financialYear, quarter])
   @@index([periodEnd])
@@ -300,6 +301,18 @@ model IndustryAum {
 // Uses the SAME AumCategory and AumPeriod tables as IndustryAum.
 //
 // This is critical because it allows direct industry-vs-company comparison.
+//
+// UNLIKE IndustryAum (one AMFI XLSX per quarter, one clean write), this
+// table is built up INCREMENTALLY: the company's raw per-client CAMS
+// export (WBR22) arrives as several separate files for the same quarter
+// (one per broker/dealer batch), so every new file ADDS its numbers on
+// top of whatever is already stored here for that (period, category) —
+// see `services/companyAumIngestionService.js` for the accumulation
+// logic. `schemeFingerprints` exists purely to make that accumulation
+// correct: it lets the ingestion service recognise "this exact scheme
+// was already counted toward schemeCount from an earlier file" without
+// ever storing the scheme's actual name (only an opaque SHA-256 hash of
+// its matched, normalized name — never the human-readable fund name).
 // ============================================================================
 
 model CompanyAum {
@@ -310,6 +323,17 @@ model CompanyAum {
 
   aum             Decimal  @db.Decimal(20, 4)
   aaum            Decimal  @db.Decimal(20, 4)
+
+  // Number of distinct matched schemes contributing to this category's
+  // totals so far (across every file processed for this period so far).
+  // aaum = aum / schemeCount.
+  schemeCount        Int      @default(0) @map("scheme_count")
+
+  // Opaque SHA-256 fingerprints of every distinct matched scheme already
+  // counted toward schemeCount for this (period, category) — never the
+  // scheme name itself. Used only to avoid double-counting the same
+  // scheme across multiple files for the same quarter.
+  schemeFingerprints String[] @default([]) @map("scheme_fingerprints")
 
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
@@ -322,6 +346,49 @@ model CompanyAum {
   @@index([categoryId])
   @@index([periodId])
   @@map("company_aum")
+}
+
+
+// ============================================================================
+// COMPANY AUM FILE IMPORT
+// Tracks ingestion of individual company WBR22 files.
+//
+// This is deliberately a SEPARATE table from AumImport: AumImport assumes
+// exactly one file per (source, period) — true for AMFI's one-XLSX-per-
+// quarter model, but not true here, since the company's data for one
+// quarter legitimately arrives as several separate WBR22 files (one per
+// broker/dealer batch/email). So this table allows many rows per period,
+// one per uploaded file, keyed by that file's content hash — which also
+// gives us duplicate-file protection: if the exact same file is
+// accidentally uploaded twice, its hash is recognised and it is skipped
+// instead of double-adding its figures into CompanyAum.
+// ============================================================================
+
+model CompanyAumFileImport {
+  id                   String          @id @default(uuid(7))
+
+  periodId             String          @map("period_id")
+
+  fileName             String?         @map("file_name")
+  fileHash             String          @map("file_hash")
+
+  status               AumImportStatus @default(PENDING)
+
+  matchedSchemeCount   Int             @default(0) @map("matched_scheme_count")
+  unmatchedSchemeCount Int             @default(0) @map("unmatched_scheme_count")
+  totalClosingAssets   Decimal?        @db.Decimal(20, 4) @map("total_closing_assets")
+
+  errorMessage         String?         @map("error_message")
+
+  createdAt            DateTime        @default(now()) @map("created_at")
+  completedAt          DateTime?       @map("completed_at")
+
+  // Relation
+  period               AumPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+
+  @@unique([periodId, fileHash])
+  @@index([periodId])
+  @@map("company_aum_file_imports")
 }
 
 
