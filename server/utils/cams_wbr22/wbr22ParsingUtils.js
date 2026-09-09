@@ -18,7 +18,7 @@
  */
 
 const { parse } = require("csv-parse/sync");
-const CustomError = require("./customError");
+const CustomError = require("../customError");
 
 /** Strip WBR22's stray trailing apostrophe from a single field, if present. */
 function stripTrailingQuote(value) {

@@ -23,13 +23,14 @@
 
 const crypto = require("crypto");
 
-const { prisma } = require("../init/prisma");
-const { getFinancialYearAndQuarterForDate, findOrCreateAumPeriod } = require("../utils/aumPeriodUtils");
-const { fetchMasterSchemeList } = require("../utils/masterSchemeListUtils");
-const { buildSchemeMatchIndex, matchSchemeName } = require("../utils/schemeNameMatchingUtils");
-const { parseWbr22File } = require("../utils/wbr22ParsingUtils");
-const { createCategoryResolver } = require("../utils/aumCategoryResolver");
-const CustomError = require("../utils/customError");
+const { prisma } = require("../../init/prisma");
+const { getFinancialYearAndQuarterForDate, findOrCreateAumPeriod } = require("../../utils/industry_aum/aumPeriodUtils");
+const { fetchMasterSchemeList } = require("../../utils/cams_wbr22/masterSchemeListUtils");
+const { authenticateBseStarmf } = require("../../utils/cams_wbr22/bseStarmfAuthenticationUtils");
+const { buildSchemeMatchIndex, matchSchemeName } = require("../../utils/cams_wbr22/schemeNameMatchingUtils");
+const { parseWbr22File } = require("../../utils/cams_wbr22/wbr22ParsingUtils");
+const { createCategoryResolver } = require("../../utils/industry_aum/aumCategoryResolver");
+const CustomError = require("../../utils/customError");
 
 /** SHA-256 hash, used both for file-level dedup and scheme-level fingerprints. Never used to hash anything we'd need to read back. */
 function sha256(value) {
@@ -288,7 +289,17 @@ async function processWbr22File(period, file, matchIndex) {
  * @param {string} options.quarterDateIso an ISO date string identifying the quarter
  * @returns {Promise<object>} a summary of the whole batch
  */
-async function ingestCompanyAumFiles({ files, quarterDateIso }) {
+async function prepareCompanyAumMatchIndex() {
+    const bearerToken = await authenticateBseStarmf();
+    const masterSchemeList = await fetchMasterSchemeList(bearerToken);
+
+    return {
+        matchIndex: buildSchemeMatchIndex(masterSchemeList),
+        schemeCount: masterSchemeList.length,
+    };
+}
+
+async function ingestCompanyAumFiles({ files, quarterDateIso, matchIndex: suppliedMatchIndex = null }) {
     if (!Array.isArray(files) || files.length === 0) {
         throw new CustomError(400, "At least one WBR22 file is required");
     }
@@ -303,15 +314,15 @@ async function ingestCompanyAumFiles({ files, quarterDateIso }) {
         `\n[CompanyAUM] Starting import of ${files.length} file(s) for FY ${financialYear} Q${quarter}...`
     );
 
+    // BSE authentication and master-list retrieval deliberately happen before
+    // creating an AUM period or file-import row. If either external call
+    // fails, this function exits without changing Company AUM data.
+    const prepared = suppliedMatchIndex
+        ? { matchIndex: suppliedMatchIndex, schemeCount: null }
+        : await prepareCompanyAumMatchIndex();
+
     const period = await findOrCreateAumPeriod(prisma, financialYear, quarter);
-
-    console.log(`[CompanyAUM] Fetching master scheme list from BSE (once for this batch)...`);
-
-    const masterSchemeList = await fetchMasterSchemeList();
-
-    console.log(`[CompanyAUM] Master scheme list loaded: ${masterSchemeList.length} scheme(s)`);
-
-    const matchIndex = buildSchemeMatchIndex(masterSchemeList);
+    const matchIndex = prepared.matchIndex;
 
     const fileResults = [];
 
@@ -330,4 +341,4 @@ async function ingestCompanyAumFiles({ files, quarterDateIso }) {
     };
 }
 
-module.exports = { ingestCompanyAumFiles };
+module.exports = { ingestCompanyAumFiles, prepareCompanyAumMatchIndex };

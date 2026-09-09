@@ -18,7 +18,7 @@
 const fs = require("fs");
 const { Transform } = require("stream");
 const { parse } = require("csv-parse");
-const CustomError = require("./customError");
+const CustomError = require("../customError");
 const { CAMS_TRANSACTION_FIELDS } = require("./camsPersistence");
 
 // ---------------------------------------------------------------------

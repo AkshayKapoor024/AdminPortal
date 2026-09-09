@@ -20,7 +20,7 @@
  * pipeline stays the same.
  */
 
-const CustomError = require("./customError");
+const CustomError = require("../customError");
 
 const MASTER_SCHEME_LIST_URL = "https://starmfv2demo.bseindia.com/api/master_scheme_list";
 
@@ -84,17 +84,15 @@ function extractSchemeRows(json) {
 /**
  * Fetch the full master scheme list from BSE.
  *
- * Requires `BSE_STARMF_API_TOKEN` to be set in the environment.
+ * @param {string} token a short-lived bearer token obtained from BSE login
  *
  * @returns {Promise<Array<{schemeName: string, schemeType: string}>>}
  */
-async function fetchMasterSchemeList() {
-    const token = process.env.BSE_STARMF_API_TOKEN;
-
-    if (!token) {
+async function fetchMasterSchemeList(token) {
+    if (!token || !String(token).trim()) {
         throw new CustomError(
             500,
-            "BSE_STARMF_API_TOKEN is not configured — set it in the environment before importing company AUM"
+            "A valid BSE STAR MF bearer token is required before loading the master scheme list"
         );
     }
 

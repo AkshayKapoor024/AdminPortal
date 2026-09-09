@@ -5,7 +5,7 @@
  * pipeline logic lives in `services/camsIngestionService.js`.
  */
 const cron = require("node-cron");
-const { runCamsIngestion: runPipeline } = require("../services/camsIngestionService");
+const { runCamsIngestion: runPipeline } = require("../services/cams_transactions/camsIngestionService");
 
 /** True while a pipeline run is in progress, to prevent overlapping runs. */
 let running = false;

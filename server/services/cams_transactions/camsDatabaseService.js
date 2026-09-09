@@ -17,9 +17,9 @@
  * identifiers for idempotency/auditing, atomically store each complete report,
  * and return explicit STORED, SKIPPED, or FAILED outcomes. No raw JSON is stored.
  */
-const { prisma } = require("../init/prisma");
-const { transactionData, transactionFingerprint } = require("../utils/camsPersistence");
-const { buildReportData, findExistingCamsReport } = require("../utils/camsReportPersistence");
+const { prisma } = require("../../init/prisma");
+const { transactionData, transactionFingerprint } = require("../../utils/cams_transactions/camsPersistence");
+const { buildReportData, findExistingCamsReport } = require("../../utils/cams_transactions/camsReportPersistence");
 
 /**
  * Persist a single parsed CAMS report (and its transactions, if any) to

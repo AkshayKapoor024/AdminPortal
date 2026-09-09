@@ -16,6 +16,8 @@ require('./jobs/dateStatusJob')
 require('./jobs/camsIngestionJob')
 // Start monthly AMFI industry AUM ingestion cron job
 require('./jobs/amfiIngestionJob')
+// Start daily CAMS WBR22 → Company AUM ingestion cron job
+require('./jobs/wbr22AumIngestionJob')
 
 const session = require('express-session')
 const cookieParser = require('cookie-parser')

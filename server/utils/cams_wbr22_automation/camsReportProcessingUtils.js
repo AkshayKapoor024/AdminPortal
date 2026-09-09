@@ -21,7 +21,7 @@ const crypto = require("crypto");
 const { execFile } = require("child_process");
 const { promisify } = require("util");
 
-const CustomError = require("./customError");
+const CustomError = require("../customError");
 
 const execFileAsync = promisify(execFile);
 
@@ -169,6 +169,10 @@ function buildReportIdentifiers(report) {
             report?.reportNumber || null,
         dispatchDateTime:
             report?.dispatchDateTime || null,
+        reportFromDate:
+            report?.reportFromDate || null,
+        reportToDate:
+            report?.reportToDate || null,
         toEmail:
             report?.toEmail || null,
     };

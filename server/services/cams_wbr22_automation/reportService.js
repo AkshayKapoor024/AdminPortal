@@ -19,7 +19,7 @@
  * and `processCamsReports` (handle a batch of reports).
  */
 
-const CustomError = require("../utils/customError");
+const CustomError = require("../../utils/customError");
 const {
     createReportTempDirectory,
     hasValidDownloadUrl,
@@ -27,7 +27,7 @@ const {
     downloadReport,
     extractReport,
     findCsvFile,
-} = require("../utils/camsReportProcessingUtils");
+} = require("../../utils/cams_wbr22_automation/camsReportProcessingUtils");
 const path = require("path");
 
 // ---------------------------------------------------------------------

@@ -10,7 +10,7 @@
  * published later than expected.
  */
 const cron = require("node-cron");
-const { runAmfiIngestion: runPipeline } = require("../services/amfiIngestionService");
+const { runAmfiIngestion: runPipeline } = require("../services/industry_aum/amfiIngestionService");
 
 /** True while a run is in progress, to prevent overlapping runs. */
 let running = false;

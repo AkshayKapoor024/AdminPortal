@@ -27,6 +27,8 @@ lib-cov
 coverage
 *.lcov
 
+example_response.json
+
 .agents/
 
 .windsurf/

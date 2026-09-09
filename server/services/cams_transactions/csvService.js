@@ -20,11 +20,11 @@
  * `processCamsCsvReports` (handle a batch of reports).
  */
 
-const CustomError = require("../utils/customError");
+const CustomError = require("../../utils/customError");
 const {
     isProcessableReport,
     parseCsvFile,
-} = require("../utils/camsCsvParsingUtils");
+} = require("../../utils/cams_transactions/camsCsvParsingUtils");
 
 // ---------------------------------------------------------------------
 // Single report processing

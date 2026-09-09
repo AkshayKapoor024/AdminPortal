@@ -36,7 +36,7 @@ const {
     extractDispatchDateTime,
     formatReadableDate,
     extractAllCamsZipUrls,
-} = require("../utils/camsEmailParsingUtils");
+} = require("../../utils/cams_wbr22_automation/camsEmailParsingUtils");
 
 // -----------------------------------------------------------------------------
 // CAMS subject matcher

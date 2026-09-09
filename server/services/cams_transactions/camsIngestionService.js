@@ -12,11 +12,11 @@
  * Runs the CAMS email → ZIP → CSV → PostgreSQL pipeline for cron and manual use.
  */
 const { retrieveCamsEmails } = require("./emailService");
-const { processCamsReports } = require("./reportService");
+const { processCamsReports } = require("../cams_wbr22_automation/reportService");
 const { processCamsCsvReports } = require("./csvService");
 const { persistCamsReports } = require("./camsDatabaseService");
-const { logCamsJob } = require("../utils/jobLogger");
-const { buildIngestionSummary } = require("../utils/camsIngestionSummary");
+const { logCamsJob } = require("../../utils/cams_transactions/jobLogger");
+const { buildIngestionSummary } = require("../../utils/cams_transactions/camsIngestionSummary");
 require('dotenv').config()
 
 /**

@@ -16,23 +16,23 @@
  * logging either way.
  */
 
-const { prisma } = require("../init/prisma");
+const { prisma } = require("../../init/prisma");
 const {
     buildFinancialYearRange,
     fetchAvailableQuarters,
     getQuarterFromPeriod,
-} = require("../utils/amfiApiUtils");
-const { findOrCreateAumPeriod } = require("../utils/aumPeriodUtils");
+} = require("../../utils/industry_aum/amfiApiUtils");
+const { findOrCreateAumPeriod } = require("../../utils/industry_aum/aumPeriodUtils");
 const {
     findOrCreateAumImport,
     updateAumImportStatus,
-} = require("../utils/aumImportUtils");
+} = require("../../utils/industry_aum/aumImportUtils");
 const {
     downloadAmfiExcel,
     parseAmfiWorkbookRows,
-} = require("../utils/amfiXlsxParsingUtils");
+} = require("../../utils/industry_aum/amfiXlsxParsingUtils");
 const { persistIndustryAumForQuarter } = require("./industryAumService");
-const { logAmfiJob } = require("../utils/amfiJobLogger");
+const { logAmfiJob } = require("../../utils/industry_aum/amfiJobLogger");
 
 /**
  * Process a single (financial year, quarter) entry returned by the AMFI

@@ -6,7 +6,7 @@
  * quarter, and hands them to `companyAumIngestionService` for parsing,
  * fund-to-category matching, and persistence.
  */
-const { ingestCompanyAumFiles } = require("../services/companyAumIngestionService");
+const { ingestCompanyAumFiles } = require("../services/cams_wbr22/companyAumIngestionService");
 const CustomError = require("../utils/customError");
 
 module.exports.importCompanyAum = async (req, res) => {

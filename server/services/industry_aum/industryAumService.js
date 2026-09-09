@@ -16,7 +16,7 @@
  * together or not at all.
  */
 
-const { createCategoryResolver } = require("../utils/aumCategoryResolver");
+const { createCategoryResolver } = require("../../utils/industry_aum/aumCategoryResolver");
 
 /**
  * Walk one quarter's classified rows, resolving/creating categories as
