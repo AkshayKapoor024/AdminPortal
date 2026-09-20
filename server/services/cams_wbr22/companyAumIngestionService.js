@@ -2,18 +2,20 @@
  * Company AUM ingestion orchestrator.
  *
  * WHAT THIS FILE DOES (plain-language summary):
- * This is the "conductor" for the company side of the AUM feature. It's
- * called directly from the import API route (not a cron job — this
- * feature is triggered by an admin uploading files), and for one
- * request it:
+ * This is the "conductor" for the company side of the AUM feature.
+ * It's called both from the manual import API route and the daily
+ * automated cron pipeline, and for one batch of files it:
  *
- *   1. works out which quarter the uploaded files belong to, from the
- *      ISO date string the caller sent
+ *   1. works out which quarter the files belong to, from the ISO date
+ *      string the caller sent
  *   2. fetches BSE's master scheme list ONCE for the whole batch
- *   3. for each uploaded WBR22 file: parses it, matches every fund name
- *      to a category via the master list, and ADDS its numbers into
- *      `CompanyAum` for that (period, category) — on top of whatever
- *      was already there from earlier files for the same quarter
+ *   3. for each file: parses it, matches every fund name to its
+ *      category AND its AMC via the master list, and applies each
+ *      fund's contribution to `CompanyAum` using the shared
+ *      day-vs-quarter update strategy in
+ *      `utils/cams_wbr22/companyAumUpsertUtils.js` (see that file for
+ *      the exact three-case rules — same-day figures add together,
+ *      a new day overwrites, a new quarter starts a fresh row).
  *
  * Every file is processed independently and defensively: one bad file
  * (corrupt CSV, all-unmatched funds, a duplicate re-upload) never stops
@@ -30,9 +32,10 @@ const { authenticateBseStarmf } = require("../../utils/cams_wbr22/bseStarmfAuthe
 const { buildSchemeMatchIndex, matchSchemeName } = require("../../utils/cams_wbr22/schemeNameMatchingUtils");
 const { parseWbr22File } = require("../../utils/cams_wbr22/wbr22ParsingUtils");
 const { createCategoryResolver } = require("../../utils/industry_aum/aumCategoryResolver");
+const { upsertDailyCompanyAum } = require("../../utils/cams_wbr22/companyAumUpsertUtils");
 const CustomError = require("../../utils/customError");
 
-/** SHA-256 hash, used both for file-level dedup and scheme-level fingerprints. Never used to hash anything we'd need to read back. */
+/** SHA-256 hash, used for file-level dedup. */
 function sha256(value) {
     return crypto.createHash("sha256").update(value).digest("hex");
 }
@@ -101,10 +104,9 @@ async function processWbr22File(period, file, matchIndex) {
             `[CompanyAUM] ${quarterLabel}: "${file.originalname}" contains ${schemeTotals.size} distinct scheme(s)`
         );
 
-        // Step 3: match every fund to a category, grouping the deltas.
-        const categoryDeltas = new Map(); // categoryName -> { aumDelta, fingerprints: Set }
+        // Step 3: match every fund to its category + AMC.
+        const matchedFunds = []; // { schemeName, category, amcCode, closingAssets }
         const unmatchedSchemes = [];
-        let matchedCount = 0;
         let totalClosingAssets = 0;
 
         for (const [schemeName, closingAssets] of schemeTotals) {
@@ -121,123 +123,74 @@ async function processWbr22File(period, file, matchIndex) {
                 continue;
             }
 
-            matchedCount++;
-
-            // Fingerprint is derived from the MATCHED master scheme
-            // name (never the raw WBR22 name), so two differently
-            // spelled WBR22 rows that both matched the same underlying
-            // fund correctly dedupe to one scheme.
-            const fingerprint = sha256(match.matchedName);
-
-            if (!categoryDeltas.has(match.category)) {
-                categoryDeltas.set(match.category, { aumDelta: 0, fingerprints: new Set() });
-            }
-
-            const entry = categoryDeltas.get(match.category);
-
-            entry.aumDelta += closingAssets;
-            entry.fingerprints.add(fingerprint);
+            matchedFunds.push({
+                schemeName: match.matchedName,
+                category: match.category,
+                amcCode: match.amcCode,
+                closingAssets,
+            });
         }
 
         console.log(
-            `[CompanyAUM] ${quarterLabel}: "${file.originalname}" matched ${matchedCount}/${schemeTotals.size} ` +
-            `scheme(s) across ${categoryDeltas.size} categor${categoryDeltas.size === 1 ? "y" : "ies"} ` +
-            `(${unmatchedSchemes.length} unmatched)`
+            `[CompanyAUM] ${quarterLabel}: "${file.originalname}" matched ${matchedFunds.length}/${schemeTotals.size} ` +
+            `scheme(s) (${unmatchedSchemes.length} unmatched)`
         );
 
-        // Step 4: persist, atomically, adding on top of whatever this
-        // (period, category) already had from earlier files.
-        const categorySummaries = await prisma.$transaction(async (tx) => {
+        // Step 4: apply each fund's contribution, atomically, using the
+        // shared day-vs-quarter update strategy.
+        const fundSummaries = await prisma.$transaction(async (tx) => {
             const { resolveOrCreateCategory } = await createCategoryResolver(tx);
             const summaries = [];
 
-            for (const [categoryName, delta] of categoryDeltas) {
-                // Company categories are flat — no parent, no hierarchy,
-                // just the broad scheme-type name from the master list
-                // (e.g. "EQUITY", "DEBT", "LIQUID").
+            for (const fund of matchedFunds) {
+                // Company categories are flat — no parent, no
+                // hierarchy, just the broad scheme-type name from the
+                // master list (e.g. "EQUITY", "DEBT", "LIQUID").
                 const category = await resolveOrCreateCategory({
-                    name: categoryName,
+                    name: fund.category,
                     level: 1,
                     isLeaf: true,
                     parentId: null,
                 });
 
-                const existing = await tx.companyAum.findUnique({
-                    where: {
-                        periodId_categoryId: {
-                            periodId: period.id,
-                            categoryId: category.id,
-                        },
-                    },
-                });
-
-                const existingFingerprints = existing ? existing.schemeFingerprints : [];
-                const existingFingerprintSet = new Set(existingFingerprints);
-
-                // Only genuinely new schemes (never seen for this
-                // period+category before, across any file) grow the
-                // scheme count — but the AUM delta always gets added,
-                // since a repeat scheme in a new file represents a
-                // different, non-overlapping set of clients.
-                const newFingerprints = [...delta.fingerprints].filter(
-                    (fp) => !existingFingerprintSet.has(fp)
-                );
-
-                const updatedFingerprints = [...existingFingerprints, ...newFingerprints];
-                const previousAum = existing ? existing.aum.toNumber() : 0;
-                const updatedAum = previousAum + delta.aumDelta;
-                const updatedSchemeCount = updatedFingerprints.length;
-                const updatedAaum = updatedSchemeCount > 0 ? updatedAum / updatedSchemeCount : 0;
-
-                await tx.companyAum.upsert({
-                    where: {
-                        periodId_categoryId: {
-                            periodId: period.id,
-                            categoryId: category.id,
-                        },
-                    },
-                    update: {
-                        aum: updatedAum,
-                        aaum: updatedAaum,
-                        schemeCount: updatedSchemeCount,
-                        schemeFingerprints: updatedFingerprints,
-                    },
-                    create: {
-                        periodId: period.id,
-                        categoryId: category.id,
-                        aum: updatedAum,
-                        aaum: updatedAaum,
-                        schemeCount: updatedSchemeCount,
-                        schemeFingerprints: updatedFingerprints,
-                    },
+                const { row, caseApplied } = await upsertDailyCompanyAum(tx, {
+                    periodId: period.id,
+                    schemeName: fund.schemeName,
+                    categoryId: category.id,
+                    amcCode: fund.amcCode,
+                    todaysDelta: fund.closingAssets,
                 });
 
                 summaries.push({
-                    category: categoryName,
-                    aum: updatedAum,
-                    aaum: updatedAaum,
-                    schemeCount: updatedSchemeCount,
-                    newSchemesFromThisFile: newFingerprints.length,
+                    schemeName: fund.schemeName,
+                    category: fund.category,
+                    amcCode: fund.amcCode,
+                    aum: row.aum.toNumber(),
+                    aaum: row.aaum.toNumber(),
+                    daysRecorded: row.daysRecorded,
+                    caseApplied,
                 });
             }
 
             return summaries;
         });
 
-        for (const summary of categorySummaries) {
-            console.log(
-                `[CompanyAUM] ${quarterLabel}: category "${summary.category}" -> ` +
-                `aum=${summary.aum.toFixed(2)} aaum=${summary.aaum.toFixed(2)} ` +
-                `schemeCount=${summary.schemeCount} (+${summary.newSchemesFromThisFile} new from this file)`
-            );
-        }
+        const caseCounts = fundSummaries.reduce((counts, s) => {
+            counts[s.caseApplied] = (counts[s.caseApplied] || 0) + 1;
+            return counts;
+        }, {});
+
+        console.log(
+            `[CompanyAUM] ${quarterLabel}: "${file.originalname}" applied ${fundSummaries.length} fund update(s) — ` +
+            Object.entries(caseCounts).map(([k, v]) => `${k}=${v}`).join(", ")
+        );
 
         // Step 5: mark this file done.
         await prisma.companyAumFileImport.update({
             where: { id: importRow.id },
             data: {
                 status: "COMPLETED",
-                matchedSchemeCount: matchedCount,
+                matchedSchemeCount: matchedFunds.length,
                 unmatchedSchemeCount: unmatchedSchemes.length,
                 totalClosingAssets,
                 completedAt: new Date(),
@@ -255,10 +208,10 @@ async function processWbr22File(period, file, matchIndex) {
         return {
             fileName: file.originalname,
             status: "COMPLETED",
-            matchedSchemeCount: matchedCount,
+            matchedSchemeCount: matchedFunds.length,
             unmatchedSchemeCount: unmatchedSchemes.length,
             totalClosingAssets,
-            categoriesUpdated: categorySummaries,
+            fundsUpdated: fundSummaries,
             unmatchedSchemes,
         };
     } catch (error) {

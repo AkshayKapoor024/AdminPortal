@@ -296,23 +296,29 @@ model IndustryAum {
 
 // ============================================================================
 // COMPANY AUM
-// Stores organization-specific AUM / AAUM observations.
+// Stores organization-specific AUM / AAUM observations, one row per
+// (fund, quarter).
 //
-// Uses the SAME AumCategory and AumPeriod tables as IndustryAum.
+// Uses the SAME AumCategory and AumPeriod tables as IndustryAum, which
+// is what makes direct industry-vs-company comparison possible.
 //
-// This is critical because it allows direct industry-vs-company comparison.
-//
-// UNLIKE IndustryAum (one AMFI XLSX per quarter, one clean write), this
-// table is built up INCREMENTALLY: the company's raw per-client CAMS
-// export (WBR22) arrives as several separate files for the same quarter
-// (one per broker/dealer batch), so every new file ADDS its numbers on
-// top of whatever is already stored here for that (period, category) —
-// see `services/companyAumIngestionService.js` for the accumulation
-// logic. `schemeFingerprints` exists purely to make that accumulation
-// correct: it lets the ingestion service recognise "this exact scheme
-// was already counted toward schemeCount from an earlier file" without
-// ever storing the scheme's actual name (only an opaque SHA-256 hash of
-// its matched, normalized name — never the human-readable fund name).
+// UPDATED STORAGE MODEL (daily real-time data, not quarterly batches):
+// CAMS and Karvy now both send WBR22-equivalent files DAILY, so this
+// table is a per-fund, per-quarter row that's kept continuously current
+// via three update cases (see `services/cams_wbr22/companyAumIngestionService.js`
+// and `services/karvy_wbr22_automation/karvyCompanyAumIngestionService.js`
+// for the exact logic both pipelines share):
+//   1. Another file arrives for a fund already updated TODAY (same
+//      calendar day) -> ADD to today's running total (different files
+//      on the same day represent different, non-overlapping clients).
+//   2. A file arrives for a fund whose last update was an EARLIER day
+//      in the SAME quarter -> OVERWRITE with today's fresh total.
+//   3. A file arrives for a NEW quarter -> CREATE a new row; the
+//      previous quarter's row is never touched again, frozen as
+//      permanent history.
+// `categoryId` and `amcCode` are static attributes of each fund, not
+// separate keys — grouping by either at query time gives the
+// category-wise or AMC-wise rollup, so only one table is needed.
 // ============================================================================
 
 model CompanyAum {
@@ -321,19 +327,36 @@ model CompanyAum {
   periodId        String   @map("period_id")
   categoryId      String   @map("category_id")
 
+  // The fund's own identity — the matched, canonical master-scheme-list
+  // name. This is now the row's real identity (one row per fund per
+  // quarter); `categoryId` and `amcCode` are descriptive attributes of
+  // that fund, not separate keys, so a plain GROUP BY on either gives
+  // the category-wise or AMC-wise rollup without needing separate
+  // tables. Storing the name itself is a deliberate, confirmed change
+  // from this table's original "never store fund names" design.
+  schemeName      String   @map("scheme_name")
+
+  // From the master scheme list's "AMC Code" (e.g. "HDFCMutualFund_MF").
+  // Nullable because older/unmatched rows may not have resolved one.
+  amcCode         String?  @map("amc_code")
+
   aum             Decimal  @db.Decimal(20, 4)
   aaum            Decimal  @db.Decimal(20, 4)
 
-  // Number of distinct matched schemes contributing to this category's
-  // totals so far (across every file processed for this period so far).
-  // aaum = aum / schemeCount.
-  schemeCount        Int      @default(0) @map("scheme_count")
+  // How many distinct calendar days' figures have been folded into
+  // `aaum` so far this quarter. Used to compute `aaum` as a running
+  // average across days (not across funds, as the old category-level
+  // table did) — incremented only when a NEW day's figures arrive
+  // (never on a same-day same-quarter top-up).
+  daysRecorded    Int      @default(0) @map("days_recorded")
 
-  // Opaque SHA-256 fingerprints of every distinct matched scheme already
-  // counted toward schemeCount for this (period, category) — never the
-  // scheme name itself. Used only to avoid double-counting the same
-  // scheme across multiple files for the same quarter.
-  schemeFingerprints String[] @default([]) @map("scheme_fingerprints")
+  // The calendar day (no time component) this row was last updated on.
+  // This is what distinguishes "another file arrived today — add to
+  // today's total" from "a new day has started — overwrite with
+  // today's fresh total" from "a new quarter has started — this
+  // becomes a new row entirely, and the old quarter's row is left
+  // untouched as permanent history."
+  lastUpdatedDate DateTime @db.Date @map("last_updated_date")
 
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
@@ -342,9 +365,10 @@ model CompanyAum {
   period          AumPeriod   @relation(fields: [periodId], references: [id], onDelete: Cascade)
   category        AumCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
 
-  @@unique([periodId, categoryId])
+  @@unique([periodId, schemeName])
   @@index([categoryId])
   @@index([periodId])
+  @@index([amcCode])
   @@map("company_aum")
 }
 
@@ -450,4 +474,154 @@ enum AumImportStatus {
   PROCESSING
   COMPLETED
   FAILED
+}
+
+
+// ============================================================================
+// KARVY (KFINTECH) TRANSACTIONS
+//
+// Mirrors the CamsReport / CamsTransaction pattern exactly (same status
+// lifecycle, same identifier-fingerprint idempotency strategy, same
+// "every field stored as a string" convention), but as fully separate
+// models — Karvy's "Transaction Feeds Report" CSV has 90 columns with
+// entirely different names from CAMS's 80-column WBR2 format, so the
+// two are not interchangeable and must not share a table.
+// ============================================================================
+
+enum KarvyReportStatus {
+  RECEIVED
+  PARSED
+  STORED
+  SKIPPED
+  FAILED
+}
+
+model KarvyTransactionReport {
+  id                    String            @id @default(uuid(7))
+  messageId             String?           @unique
+  identifierFingerprint String            @unique
+  reportRequestNumber   String?
+  reportNumber          String?
+  dispatchDateTime      DateTime?
+  toEmail               String?
+  status                KarvyReportStatus
+  error                 String?
+  transactionCount      Int               @default(0)
+  processingAttempts    Int               @default(1)
+  parsedAt              DateTime?
+  storedAt              DateTime?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+
+  transactions KarvyTransaction[]
+
+  @@index([reportRequestNumber])
+  @@index([dispatchDateTime])
+  @@map("karvy_transaction_reports")
+}
+
+model KarvyTransaction {
+  id          String   @id @default(uuid(7))
+  reportId    String
+  fingerprint String
+  createdAt   DateTime @default(now())
+
+  report KarvyTransactionReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  productCode                String?
+  fund                       String?
+  folioNumber                String?
+  schemeCode                 String?
+  fundDescription            String?
+  transactionHead            String?
+  transactionNumber          String?
+  switchRefNo                String?
+  instrumentNumber           String?
+  investorName               String?
+  transactionMode            String?
+  transactionStatus          String?
+  branchName                 String?
+  branchTransactionNo        String?
+  transactionDate            String?
+  processDate                String?
+  price                      String?
+  units                      String?
+  amount                     String?
+  agentCode                  String?
+  subBrokerCode              String?
+  brokeragePercentage        String?
+  commission                 String?
+  investorId                 String?
+  reportDate                 String?
+  reportTime                 String?
+  transactionSub             String?
+  applicationNumber          String?
+  transactionId              String?
+  transactionDescription     String?
+  transactionType            String?
+  instrumentDate             String?
+  instrumentBank             String?
+  dividendOption             String?
+  purchaseAmount             String?
+  purchaseDate               String?
+  switchFundDate             String?
+  transactionFlag            String?
+  nav                        String?
+  purchaseTransactionNo      String?
+  stt                        String?
+  loadPercentage             String?
+  loadAmount                 String?
+  purchaseUnits              String?
+  ihno                       String?
+  branchCode                 String?
+  inwardNumber               String?
+  pan1                       String?
+  remarks                    String?
+  navDate                    String?
+  pan2                       String?
+  pan3                       String?
+  tdsAmount                  String?
+  scheme                     String?
+  plan                       String?
+  toProductCode              String?
+  tdTrxnmode                 String?
+  clientId                   String?
+  dpId                       String?
+  status                     String?
+  rejTrnoOrgNo               String?
+  subTranType                String?
+  trCharges                  String?
+  atmCardStatus              String?
+  atmCardRemarks             String?
+  nctChangeDate              String?
+  isin                       String?
+  cityCategory               String?
+  portDate                   String?
+  newUnqno                   String?
+  euin                       String?
+  subBrokerArnCode           String?
+  euinValidIndicator         String?
+  euinDeclarationIndicator   String?
+  assetType                  String?
+  sipRegnDate                String?
+  divPer                     String?
+  guardPanNo                 String?
+  commonAccountNumber        String?
+  exchangeOrgTrType          String?
+  electronicTransactionFlag  String?
+  sipregslno                 String?
+  chequeclearnce             String?
+  investorState              String?
+  retailFlag                 String?
+  stampDutyCharges           String?
+  feedType                   String?
+  utrNo                      String?
+  paymentInstrumentType      String?
+  bankAcno                   String?
+
+  @@unique([reportId, fingerprint])
+  @@index([folioNumber])
+  @@index([pan1])
+  @@index([transactionNumber])
+  @@map("karvy_transactions")
 }

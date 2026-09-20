@@ -18,6 +18,10 @@ require('./jobs/camsIngestionJob')
 require('./jobs/amfiIngestionJob')
 // Start daily CAMS WBR22 → Company AUM ingestion cron job
 require('./jobs/wbr22AumIngestionJob')
+// Start daily Karvy WBR22 → Company AUM ingestion cron job
+require('./jobs/karvyWbr22AumIngestionJob')
+// Start daily Karvy transactions ingestion cron job
+require('./jobs/karvyTransactionIngestionJob')
 
 const session = require('express-session')
 const cookieParser = require('cookie-parser')

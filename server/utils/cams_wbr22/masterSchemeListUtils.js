@@ -4,9 +4,10 @@
  * WHAT THIS FILE IS FOR (plain-language summary):
  * Fetches the master list of every mutual fund scheme BSE knows about,
  * each tagged with its category ("Scheme Type" — EQUITY, DEBT, LIQUID,
- * etc). This is the reference list `utils/schemeNameMatchingUtils.js`
- * matches WBR22 fund names against, so each fund's assets can be
- * grouped into the right category for `CompanyAum`.
+ * etc) and its AMC ("AMC Code" — e.g. "HDFCMutualFund_MF"). This is the
+ * reference list `utils/schemeNameMatchingUtils.js` matches WBR22 fund
+ * names against, so each fund's assets can be attributed to the right
+ * category and AMC in `CompanyAum`.
  *
  * IMPORTANT — this is an undocumented/internal BSE endpoint. The exact
  * shape of a successful response (which wrapper key the scheme array
@@ -32,6 +33,11 @@ const SCHEME_NAME_FIELD_CANDIDATES = [
 /** Common spellings a scheme's category might be returned under. */
 const SCHEME_TYPE_FIELD_CANDIDATES = [
     "Scheme Type", "scheme_type", "SCHEME_TYPE", "SchemeType", "schemeType",
+];
+
+/** Common spellings a scheme's AMC identifier might be returned under. */
+const AMC_CODE_FIELD_CANDIDATES = [
+    "AMC Code", "amc_code", "AMC_CODE", "AmcCode", "amcCode",
 ];
 
 /** Read the first present field from a list of candidate key names. */
@@ -86,7 +92,7 @@ function extractSchemeRows(json) {
  *
  * @param {string} token a short-lived bearer token obtained from BSE login
  *
- * @returns {Promise<Array<{schemeName: string, schemeType: string}>>}
+ * @returns {Promise<Array<{schemeName: string, schemeType: string, amcCode: string|null}>>}
  */
 async function fetchMasterSchemeList(token) {
     if (!token || !String(token).trim()) {
@@ -139,9 +145,10 @@ async function fetchMasterSchemeList(token) {
     for (const row of rows) {
         const schemeName = pickField(row, SCHEME_NAME_FIELD_CANDIDATES);
         const schemeType = pickField(row, SCHEME_TYPE_FIELD_CANDIDATES);
+        const amcCode = pickField(row, AMC_CODE_FIELD_CANDIDATES);
 
         if (schemeName && schemeType) {
-            schemes.push({ schemeName, schemeType });
+            schemes.push({ schemeName, schemeType, amcCode: amcCode || null });
         }
     }
 

@@ -207,7 +207,7 @@ async function retrieveCamsEmails() {
             const cutoff =
                 new Date(
                     now.getTime() -
-                    24 * 60 * 60 * 1000
+                    48 * 60 * 60 * 1000
                 );
 
             // -----------------------------------------------------------------

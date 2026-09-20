@@ -76,8 +76,8 @@ function normalizeSchemeName(name) {
  * batch (so it can be reused across every uploaded file without
  * re-normalizing 12000+ names each time).
  *
- * @param {Array<{schemeName: string, schemeType: string}>} masterSchemeList
- * @returns {{exactIndex: Map<string,string>, blockIndex: Map<string, Array<[string,string]>>}}
+ * @param {Array<{schemeName: string, schemeType: string, amcCode: string|null}>} masterSchemeList
+ * @returns {{exactIndex: Map<string,object>, blockIndex: Map<string, Array<[string,object]>>}}
  */
 function buildSchemeMatchIndex(masterSchemeList) {
     const exactIndex = new Map();
@@ -96,10 +96,12 @@ function buildSchemeMatchIndex(masterSchemeList) {
             continue;
         }
 
+        const details = { category, amcCode: entry.amcCode || null };
+
         // First entry for a given normalized name wins; later duplicates
         // (a fund's other plan/option rows) are expected to agree anyway.
         if (!exactIndex.has(normalized)) {
-            exactIndex.set(normalized, category);
+            exactIndex.set(normalized, details);
         }
 
         // Bucket candidates by their first word (almost always the AMC
@@ -111,7 +113,7 @@ function buildSchemeMatchIndex(masterSchemeList) {
             blockIndex.set(firstWord, []);
         }
 
-        blockIndex.get(firstWord).push([normalized, category]);
+        blockIndex.get(firstWord).push([normalized, details]);
     }
 
     return { exactIndex, blockIndex };
@@ -122,13 +124,14 @@ function buildSchemeMatchIndex(masterSchemeList) {
 // -----------------------------------------------------------------------------
 
 /**
- * Resolve one WBR22 fund name to a master-list category.
+ * Resolve one WBR22 fund name to a master-list category (and AMC).
  *
  * @param {string} schemeName the raw fund name from WBR22
  * @param {{exactIndex: Map, blockIndex: Map}} matchIndex from `buildSchemeMatchIndex`
  * @returns {{
  *   matched: boolean,
  *   category: string|null,
+ *   amcCode: string|null,
  *   matchedName: string|null,
  *   method: "exact"|"fuzzy"|"unmatched",
  *   score: number
@@ -138,15 +141,16 @@ function matchSchemeName(schemeName, matchIndex) {
     const normalized = normalizeSchemeName(schemeName);
 
     if (!normalized) {
-        return { matched: false, category: null, matchedName: null, method: "unmatched", score: 0 };
+        return { matched: false, category: null, amcCode: null, matchedName: null, method: "unmatched", score: 0 };
     }
 
-    const exactCategory = matchIndex.exactIndex.get(normalized);
+    const exactDetails = matchIndex.exactIndex.get(normalized);
 
-    if (exactCategory) {
+    if (exactDetails) {
         return {
             matched: true,
-            category: exactCategory,
+            category: exactDetails.category,
+            amcCode: exactDetails.amcCode,
             matchedName: normalized,
             method: "exact",
             score: 1,
@@ -158,22 +162,23 @@ function matchSchemeName(schemeName, matchIndex) {
 
     let bestScore = 0;
     let bestName = null;
-    let bestCategory = null;
+    let bestDetails = null;
 
-    for (const [candidateName, candidateCategory] of candidates) {
+    for (const [candidateName, candidateDetails] of candidates) {
         const score = sequenceMatcherRatio(normalized, candidateName);
 
         if (score > bestScore) {
             bestScore = score;
             bestName = candidateName;
-            bestCategory = candidateCategory;
+            bestDetails = candidateDetails;
         }
     }
 
     if (bestScore >= FUZZY_MATCH_THRESHOLD) {
         return {
             matched: true,
-            category: bestCategory,
+            category: bestDetails.category,
+            amcCode: bestDetails.amcCode,
             matchedName: bestName,
             method: "fuzzy",
             score: bestScore,
@@ -185,6 +190,7 @@ function matchSchemeName(schemeName, matchIndex) {
     return {
         matched: false,
         category: null,
+        amcCode: null,
         matchedName: bestName,
         method: "unmatched",
         score: bestScore,
