@@ -21,13 +21,15 @@ model User {
 
   tasks Task[]
   leads Lead[]
+
+  @@map("users")
 }
 
 model Task {
   id           String   @id @default(uuid(7))
   title        String
   description  String
-  clientId     String
+  clientId     String   // 👈 future FK to Client.id — plain string for now
   category     String
   priority     String
   status       String
@@ -35,7 +37,11 @@ model Task {
   dueDateLabel String   @default("Upcoming")
   createdAt    DateTime @default(now())
 
-  user User @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  // 👇 owner — the logged-in admin user
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("tasks")
 }
 
 model Lead {
@@ -54,9 +60,13 @@ model Lead {
   reminder        Boolean
   description     String
   documents       String[]
-  primary_user    String
+  clientId        String?  // 👈 optional, same future-proofing as Task
 
-  user User @relation(fields: [primary_user], references: [email], onDelete: Cascade)
+  // 👇 owner — the logged-in admin user (renamed from primary_user)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("leads")
 }
 
 enum CamsReportStatus {

@@ -6,7 +6,7 @@
  * always stripped out of any user object sent back in a response.
  */
 
-const { prisma } = require('./init/prisma')
+const { prisma } = require('../init/prisma')
 const bcrypt = require('bcrypt')
 
 module.exports.signup = async (req, res) => {
@@ -184,3 +184,29 @@ module.exports.logout = (req, res) => {
         })
     }
 }
+/**
+ * GET /api/auth/isAuthenticated
+ *
+ * Used by the frontend on boot to check if the current session is valid.
+ * If session_id is set, returns the cached user from session.
+ */
+module.exports.isAuthenticatedController = async (req, res) => {
+  try {
+    if (!req.session.session_id || !req.session.user) {
+      return res.status(401).json({
+        message: "Not authenticated",
+        user: null,
+      });
+    }
+
+    return res.status(200).json({
+      message: "Authenticated",
+      user: req.session.user,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Authentication check failed",
+      error: error.message,
+    });
+  }
+};

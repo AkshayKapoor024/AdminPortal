@@ -71,10 +71,10 @@ app.use('/api/auth', authRouter)
 
 
 // Task routes router
-app.use('/api/task', taskRouter)
+app.use('/api/tasks', taskRouter)
 
 // Lead apis
-app.use('/api/lead', leadRouter)
+app.use('/api/leads', leadRouter)
 
 // Company AUM import apis
 app.use('/api/company-aum', companyAumRouter)

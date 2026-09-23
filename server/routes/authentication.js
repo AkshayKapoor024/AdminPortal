@@ -10,9 +10,9 @@ const router = express.Router()
 
 const wrapAsync = require('../utils/wrapAsync')
 
-const { LoginValidate, SignupValidate , isAuthenticated } = require('./middlewares/middleware')
+const { LoginValidate, SignupValidate , isAuthenticated } = require('../middlewares/middleware')
 
-const { login, signup, getSingleUser, getUsers, logout } = require('../controllers/authentication')
+const { login, signup, getSingleUser, getUsers, logout  , isAuthenticatedController} = require('../controllers/authentication')
 
 router.post('/signup',SignupValidate,wrapAsync(signup))
 
@@ -23,5 +23,7 @@ router.get('/getUsers',isAuthenticated,wrapAsync(getUsers))
 router.get('/getUser/:id',isAuthenticated,wrapAsync(getSingleUser))
 
 router.get('/logout',isAuthenticated,logout)
+
+router.get('/isAuthenticated', isAuthenticatedController)
 
 module.exports = router

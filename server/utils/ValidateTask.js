@@ -4,15 +4,17 @@
  * Used by `middlewares/middleware.js` (`TaskValidate`) to check the
  * request body before a task is created or updated.
  */
-const joi = require('joi')
+// utils/ValidateTask.js
+const Joi = require("joi");
 
-module.exports = new joi.object({
-    id:joi.string().optional(),
-    title:joi.string().required(),
-    description:joi.string().required(),
-    clientId:joi.string().required(),
-    category:joi.string().required(),
-    priority:joi.string().required(),
-    dueDate:joi.date().required(),
-    status:joi.string().required()
-})
+module.exports = Joi.object({
+  title: Joi.string().required(),
+  description: Joi.string().allow("").optional(),
+  clientId: Joi.string().required(),     // plain string, mock for now
+  category: Joi.string().required(),
+  priority: Joi.string().valid("High", "Medium", "Low").required(),
+  status: Joi.string().valid("Open", "In progress", "Closed").required(),
+  dueDate: Joi.date().required(),
+  id: Joi.string().optional(),
+  // userId NOT accepted from frontend
+});

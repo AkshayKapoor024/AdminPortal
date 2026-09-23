@@ -6,7 +6,7 @@ const router = express.Router()
 
 const wrapAsync = require('../utils/wrapAsync')
 
-const { isAuthenticated, LeadValidate } = require('../middlewares/middleware')
+const { isAuthenticated,TaskValidate } = require('../middlewares/middleware')
 
 const { create, update, getAll, getSingle, remove } = require('../controllers/tasks')
 
