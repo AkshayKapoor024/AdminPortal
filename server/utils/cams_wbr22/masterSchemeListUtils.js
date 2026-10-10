@@ -162,4 +162,50 @@ async function fetchMasterSchemeList(token) {
     return schemes;
 }
 
-module.exports = { fetchMasterSchemeList, extractSchemeRows, pickField };
+/**
+ * Fetch the master scheme list directly from the local PostgreSQL database table.
+ * If the table is empty, auto-triggers syncBseSchemeMasterData to populate it.
+ *
+ * @returns {Promise<Array<{schemeName: string, schemeType: string, amcCode: string|null}>>}
+ */
+async function fetchMasterSchemeListFromDb() {
+    const { prisma } = require("../../init/prisma");
+
+    let rows = await prisma.bseSchemeMaster.findMany({
+        select: {
+            schemeName: true,
+            schemeType: true,
+            amcCode: true,
+        },
+    });
+
+    if (!rows || rows.length === 0) {
+        console.log("[MasterSchemeList] Database table is empty. Triggering automatic initial synchronization...");
+        const { syncBseSchemeMasterData } = require("../../services/bse_star_master/bseStarSchemeMasterIngestionService");
+        await syncBseSchemeMasterData();
+
+        rows = await prisma.bseSchemeMaster.findMany({
+            select: {
+                schemeName: true,
+                schemeType: true,
+                amcCode: true,
+            },
+        });
+    }
+
+    const schemes = [];
+    for (const row of rows) {
+        if (row.schemeName && row.schemeType) {
+            schemes.push({
+                schemeName: row.schemeName.trim(),
+                schemeType: row.schemeType.trim(),
+                amcCode: row.amcCode ? row.amcCode.trim() : null,
+            });
+        }
+    }
+
+    return schemes;
+}
+
+module.exports = { fetchMasterSchemeList, fetchMasterSchemeListFromDb, extractSchemeRows, pickField };
+

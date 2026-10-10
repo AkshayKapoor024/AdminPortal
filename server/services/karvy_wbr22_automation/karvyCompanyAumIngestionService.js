@@ -28,7 +28,7 @@ const crypto = require("crypto");
 const { prisma } = require("../../init/prisma");
 const { findOrCreateAumPeriod, getFinancialYearAndQuarterForDate } = require("../../utils/industry_aum/aumPeriodUtils");
 const { createCategoryResolver } = require("../../utils/industry_aum/aumCategoryResolver");
-const { matchSchemeName } = require("../../utils/cams_wbr22/schemeNameMatchingUtils");
+const { matchSchemeName, normalizeSchemeName } = require("../../utils/cams_wbr22/schemeNameMatchingUtils");
 const { parseKarvyWbr22File } = require("../../utils/karvy_wbr22_automation/karvyWbr22ParsingUtils");
 const { prepareCompanyAumMatchIndex } = require("../cams_wbr22/companyAumIngestionService");
 const { upsertDailyCompanyAum } = require("../../utils/cams_wbr22/companyAumUpsertUtils");
@@ -98,26 +98,43 @@ async function processKarvyWbr22File(period, file, matchIndex) {
 
             const match = matchSchemeName(schemeName, matchIndex);
 
-            if (!match.matched) {
+            // If a category match exists, use it; otherwise fallback category to "Other"
+            // For an unmatched scheme there is no canonical master-list name to
+            // key on, so normalize the raw WBR22 text the same way matching
+            // does (case/whitespace/punctuation). Using the raw text as-is
+            // would let tiny formatting differences between days' files (a
+            // trailing space, a capitalization change) silently create a
+            // brand-new "Other" row instead of updating the same fund's row.
+            const resolvedSchemeName = match.matched
+                ? match.matchedName
+                // Normalization can strip an all-noise-word name down to "" —
+                // fall back to the raw trimmed text so two unrelated unmatched
+                // funds never collide onto the same "Other" row.
+                : (normalizeSchemeName(schemeName) || schemeName.trim());
+            const resolvedCategory = (match.matched && match.category) ? match.category : "Other";
+            const resolvedAmcCode = match.matched ? match.amcCode : null;
+
+            if (!match.matched || !match.category) {
                 unmatchedSchemes.push({
+                    originalSchemeName: schemeName,
                     closingAssets,
                     bestGuessMatch: match.matchedName,
                     bestGuessScore: Number(match.score.toFixed(3)),
+                    assignedCategory: "Other",
                 });
-                continue;
             }
 
             matchedFunds.push({
-                schemeName: match.matchedName,
-                category: match.category,
-                amcCode: match.amcCode,
+                schemeName: resolvedSchemeName,
+                category: resolvedCategory,
+                amcCode: resolvedAmcCode,
                 closingAssets,
             });
         }
 
         console.log(
-            `[KarvyCompanyAUM] ${quarterLabel}: "${file.originalname}" matched ${matchedFunds.length}/${schemeTotals.size} ` +
-            `scheme(s) (${unmatchedSchemes.length} unmatched)`
+            `[KarvyCompanyAUM] ${quarterLabel}: "${file.originalname}" mapped ${matchedFunds.length}/${schemeTotals.size} ` +
+            `scheme(s) (${unmatchedSchemes.length} assigned fallback category "Other")`
         );
 
         const fundSummaries = await prisma.$transaction(async (tx) => {
@@ -177,9 +194,9 @@ async function processKarvyWbr22File(period, file, matchIndex) {
         });
 
         if (unmatchedSchemes.length > 0) {
-            console.warn(
+            console.log(
                 `[KarvyCompanyAUM] ${quarterLabel}: "${file.originalname}" — ${unmatchedSchemes.length} scheme(s) ` +
-                `could not be confidently matched to a category and were excluded from the totals`
+                `without a direct BSE category match were persisted under category "Other".`
             );
         }
 

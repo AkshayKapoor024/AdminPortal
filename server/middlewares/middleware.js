@@ -8,6 +8,7 @@ const ValidateSignup = require('../utils/ValidateSignup')
 const ValidateLogin = require('../utils/ValidateLogin')
 const ValidateTask = require('../utils/ValidateTask.js')
 const ValidateLead = require('../utils/ValidateLead.js')
+const ValidateAnalytics = require('../utils/ValidateAnalytics.js')
 const customError = require('../utils/customError.js')
 
 /** Validates a signup (new user) request body before creating an account. */
@@ -46,6 +47,17 @@ module.exports.TaskValidate = (req, res, next) => {
 /** Validates a lead request body before creating/updating a lead. */
 module.exports.LeadValidate = (req, res, next) => {
     const response = ValidateLead.validate(req.body)
+
+    if (response.error) {
+        throw new customError(400, response.error.details[0].message)
+    } else {
+        next()
+    }
+}
+
+/** Validates an analytics request (query or body) before processing. */
+module.exports.AnalyticsValidate = (req, res, next) => {
+    const response = ValidateAnalytics.validate({ ...req.query, ...req.body })
 
     if (response.error) {
         throw new customError(400, response.error.details[0].message)

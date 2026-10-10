@@ -27,9 +27,8 @@ const crypto = require("crypto");
 
 const { prisma } = require("../../init/prisma");
 const { getFinancialYearAndQuarterForDate, findOrCreateAumPeriod } = require("../../utils/industry_aum/aumPeriodUtils");
-const { fetchMasterSchemeList } = require("../../utils/cams_wbr22/masterSchemeListUtils");
-const { authenticateBseStarmf } = require("../../utils/cams_wbr22/bseStarmfAuthenticationUtils");
-const { buildSchemeMatchIndex, matchSchemeName } = require("../../utils/cams_wbr22/schemeNameMatchingUtils");
+const { fetchMasterSchemeListFromDb } = require("../../utils/cams_wbr22/masterSchemeListUtils");
+const { buildSchemeMatchIndex, matchSchemeName, normalizeSchemeName } = require("../../utils/cams_wbr22/schemeNameMatchingUtils");
 const { parseWbr22File } = require("../../utils/cams_wbr22/wbr22ParsingUtils");
 const { createCategoryResolver } = require("../../utils/industry_aum/aumCategoryResolver");
 const { upsertDailyCompanyAum } = require("../../utils/cams_wbr22/companyAumUpsertUtils");
@@ -114,26 +113,43 @@ async function processWbr22File(period, file, matchIndex) {
 
             const match = matchSchemeName(schemeName, matchIndex);
 
-            if (!match.matched) {
+            // If a category match exists, use it; otherwise fallback category to "Other"
+            // For an unmatched scheme there is no canonical master-list name to
+            // key on, so normalize the raw WBR22 text the same way matching
+            // does (case/whitespace/punctuation). Using the raw text as-is
+            // would let tiny formatting differences between days' files (a
+            // trailing space, a capitalization change) silently create a
+            // brand-new "Other" row instead of updating the same fund's row.
+            const resolvedSchemeName = match.matched
+                ? match.matchedName
+                // Normalization can strip an all-noise-word name down to "" —
+                // fall back to the raw trimmed text so two unrelated unmatched
+                // funds never collide onto the same "Other" row.
+                : (normalizeSchemeName(schemeName) || schemeName.trim());
+            const resolvedCategory = (match.matched && match.category) ? match.category : "Other";
+            const resolvedAmcCode = match.matched ? match.amcCode : null;
+
+            if (!match.matched || !match.category) {
                 unmatchedSchemes.push({
+                    originalSchemeName: schemeName,
                     closingAssets,
                     bestGuessMatch: match.matchedName,
                     bestGuessScore: Number(match.score.toFixed(3)),
+                    assignedCategory: "Other",
                 });
-                continue;
             }
 
             matchedFunds.push({
-                schemeName: match.matchedName,
-                category: match.category,
-                amcCode: match.amcCode,
+                schemeName: resolvedSchemeName,
+                category: resolvedCategory,
+                amcCode: resolvedAmcCode,
                 closingAssets,
             });
         }
 
         console.log(
-            `[CompanyAUM] ${quarterLabel}: "${file.originalname}" matched ${matchedFunds.length}/${schemeTotals.size} ` +
-            `scheme(s) (${unmatchedSchemes.length} unmatched)`
+            `[CompanyAUM] ${quarterLabel}: "${file.originalname}" mapped ${matchedFunds.length}/${schemeTotals.size} ` +
+            `scheme(s) (${unmatchedSchemes.length} assigned fallback category "Other")`
         );
 
         // Step 4: apply each fund's contribution, atomically, using the
@@ -145,7 +161,7 @@ async function processWbr22File(period, file, matchIndex) {
             for (const fund of matchedFunds) {
                 // Company categories are flat — no parent, no
                 // hierarchy, just the broad scheme-type name from the
-                // master list (e.g. "EQUITY", "DEBT", "LIQUID").
+                // master list (e.g. "EQUITY", "DEBT", "LIQUID", "Other").
                 const category = await resolveOrCreateCategory({
                     name: fund.category,
                     level: 1,
@@ -199,9 +215,9 @@ async function processWbr22File(period, file, matchIndex) {
         });
 
         if (unmatchedSchemes.length > 0) {
-            console.warn(
+            console.log(
                 `[CompanyAUM] ${quarterLabel}: "${file.originalname}" — ${unmatchedSchemes.length} scheme(s) ` +
-                `could not be confidently matched to a category and were excluded from the totals`
+                `without a direct BSE category match were persisted under category "Other".`
             );
         }
 
@@ -243,8 +259,7 @@ async function processWbr22File(period, file, matchIndex) {
  * @returns {Promise<object>} a summary of the whole batch
  */
 async function prepareCompanyAumMatchIndex() {
-    const bearerToken = await authenticateBseStarmf();
-    const masterSchemeList = await fetchMasterSchemeList(bearerToken);
+    const masterSchemeList = await fetchMasterSchemeListFromDb();
 
     return {
         matchIndex: buildSchemeMatchIndex(masterSchemeList),

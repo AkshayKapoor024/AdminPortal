@@ -16,6 +16,8 @@ require('./jobs/dateStatusJob')
 require('./jobs/camsIngestionJob')
 // Start monthly AMFI industry AUM ingestion cron job
 require('./jobs/amfiIngestionJob')
+// Start daily BSE Star Scheme Master ingestion cron job
+require('./jobs/bseStarSchemeMasterIngestionJob')
 // Start daily CAMS WBR22 → Company AUM ingestion cron job
 require('./jobs/wbr22AumIngestionJob')
 // Start daily Karvy WBR22 → Company AUM ingestion cron job
@@ -30,6 +32,7 @@ const authRouter = require('./routes/authentication')
 const taskRouter = require('./routes/tasks')
 const leadRouter = require('./routes/leads')
 const companyAumRouter = require('./routes/companyAum')
+const analyticsRouter = require('./routes/analytics')
 
 const cors = require('cors')
 
@@ -78,6 +81,19 @@ app.use('/api/leads', leadRouter)
 
 // Company AUM import apis
 app.use('/api/company-aum', companyAumRouter)
+
+// Business Analytics apis (mounted on both /api/analytics and /analytics)
+app.use('/api/analytics', analyticsRouter)
+app.use('/analytics', analyticsRouter)
+
+// Central error handling middleware for wrapAsync / customError
+app.use((err, req, res, next) => {
+    const status = err.status || 500
+    res.status(status).json({
+        error: err.name || 'Error',
+        message: err.message || 'Internal server error',
+    })
+})
 
 app.listen(port, () => {
     console.log(`App listening at port http://localhost:${port}`)

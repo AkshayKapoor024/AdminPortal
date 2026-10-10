@@ -635,3 +635,66 @@ model KarvyTransaction {
   @@index([transactionNumber])
   @@map("karvy_transactions")
 }
+
+// ============================================================================
+// BSE STAR SCHEME MASTER
+// Stores the master list of all schemes provided daily by BSE Star MF.
+// This list maps scheme names to scheme types (categories) and AMC codes.
+// ============================================================================
+
+model BseSchemeMaster {
+  id                         String   @id @default(uuid(7))
+  uniqueNo                   String?  @map("unique_no")
+  schemeCode                 String   @map("scheme_code")
+  rtaSchemeCode              String?  @map("rta_scheme_code")
+  amcSchemeCode              String?  @map("amc_scheme_code")
+  isin                       String?  @map("isin")
+  amcCode                    String?  @map("amc_code")
+  schemeType                 String?  @map("scheme_type")
+  schemePlan                 String?  @map("scheme_plan")
+  schemeName                 String   @map("scheme_name")
+  purchaseAllowed            String?  @map("purchase_allowed")
+  purchaseTransactionMode    String?  @map("purchase_transaction_mode")
+  minimumPurchaseAmount      String?  @map("minimum_purchase_amount")
+  additionalPurchaseAmount   String?  @map("additional_purchase_amount")
+  maximumPurchaseAmount      String?  @map("maximum_purchase_amount")
+  purchaseAmountMultiplier   String?  @map("purchase_amount_multiplier")
+  purchaseCutoffTime         String?  @map("purchase_cutoff_time")
+  redemptionAllowed          String?  @map("redemption_allowed")
+  redemptionTransactionMode  String?  @map("redemption_transaction_mode")
+  minimumRedemptionQty       String?  @map("minimum_redemption_qty")
+  redemptionQtyMultiplier    String?  @map("redemption_qty_multiplier")
+  maximumRedemptionQty       String?  @map("maximum_redemption_qty")
+  redemptionAmountMinimum    String?  @map("redemption_amount_minimum")
+  redemptionAmountMaximum    String?  @map("redemption_amount_maximum")
+  redemptionAmountMultiple   String?  @map("redemption_amount_multiple")
+  redemptionCutoffTime       String?  @map("redemption_cutoff_time")
+  rtaAgentCode               String?  @map("rta_agent_code")
+  amcActiveFlag              String?  @map("amc_active_flag")
+  dividendReinvestmentFlag   String?  @map("dividend_reinvestment_flag")
+  sipFlag                    String?  @map("sip_flag")
+  stpFlag                    String?  @map("stp_flag")
+  swpFlag                    String?  @map("swp_flag")
+  switchFlag                 String?  @map("switch_flag")
+  settlementType             String?  @map("settlement_type")
+  amcInd                     String?  @map("amc_ind")
+  faceValue                  String?  @map("face_value")
+  startDate                  String?  @map("start_date")
+  endDate                    String?  @map("end_date")
+  exitLoadFlag               String?  @map("exit_load_flag")
+  exitLoad                   String?  @map("exit_load")
+  lockInPeriodFlag           String?  @map("lock_in_period_flag")
+  lockInPeriod               String?  @map("lock_in_period")
+  channelPartnerCode         String?  @map("channel_partner_code")
+  reopeningDate              String?  @map("reopening_date")
+
+  createdAt                  DateTime @default(now()) @map("created_at")
+  updatedAt                  DateTime @updatedAt @map("updated_at")
+
+  @@index([schemeCode])
+  @@index([isin])
+  @@index([schemeName])
+  @@index([amcCode])
+  @@map("bse_scheme_masters")
+}
+

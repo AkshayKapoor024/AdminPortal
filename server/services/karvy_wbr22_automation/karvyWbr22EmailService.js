@@ -58,7 +58,13 @@ function parseKarvyWbr22Email(parsed) {
         fromEmail: parsed.from?.value?.[0]?.address || null,
         toEmail: parsed.to?.value?.[0]?.address || null,
         subject,
-        reportRequestNumber: extractKarvyRefNumber(subject),
+        // Falls back to a short id derived from the messageId if the subject
+        // has no "Ref. No." — the shared report service needs a non-empty
+        // request number to name its temp folder.
+        reportRequestNumber:
+            extractKarvyRefNumber(subject) ||
+            (parsed.messageId ? parsed.messageId.replace(/[^a-zA-Z0-9]/g, "").slice(0, 40) : null) ||
+            Date.now().toString(),
         reportNumber: extractKarvyReportNumber(text),
         downloadUrl,
         reportFromDate: dateRange.from,
@@ -103,9 +109,17 @@ async function retrieveKarvyWbr22Emails() {
 
                 const report = parseKarvyWbr22Email(await simpleParser(message.source));
 
-                if (APPROVED_KARVY_WBR22_REPORT_REQUEST_NUMBERS.has(report.reportRequestNumber)) {
-                    reports.push(report);
-                }
+                // Report Request Number allow-list — DISABLED. Karvy's Ref. No.
+                // changes between reports (real runs with the single approved
+                // number returned 0 emails). The subject filter above is what
+                // identifies these reports now. To enforce specific numbers
+                // again, update APPROVED_KARVY_WBR22_REPORT_REQUEST_NUMBERS and
+                // swap the push below for the commented block:
+                //
+                // if (APPROVED_KARVY_WBR22_REPORT_REQUEST_NUMBERS.has(report.reportRequestNumber)) {
+                //     reports.push(report);
+                // }
+                reports.push(report);
             }
         } finally {
             lock.release();

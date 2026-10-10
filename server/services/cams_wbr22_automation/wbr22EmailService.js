@@ -1,9 +1,20 @@
 /**
  * WBR22 CAMS email retrieval service.
  *
- * Retrieves only the four approved WBR22 "AuM on a specific date" emails
- * received in the last 24 hours. It returns normalized metadata for the
- * shared report-extraction service; it does not download files or write data.
+ * Retrieves WBR22 "AuM on a specific date" emails received in the last 24 hours.
+ * Filters by:
+ *   1. Subject matching WBR22 title: "WBR22. AuM on a specific date by Scheme by Investor, "
+ *   2. Must contain a valid download URL (emails without downloadUrl are filtered out)
+ *
+ * Note: Recipient (toEmail) filtering is OFF by default (ENFORCE_TARGET_RECIPIENT).
+ * WBR22 AUM emails are forwarded from multiple accounts (rajendrashirode@gmail.com,
+ * kusumdwani@gmail.com, sanjayshirode93@gmail.com, etc.) to admin@dkwealth.co.in via
+ * Gmail forwarding. The parsed To: header shows the *original* recipient, not the
+ * forwarded-to address — so a strict toEmail check filters out valid emails.
+ * The subject regex + downloadUrl check is sufficient to uniquely identify WBR22 AUM emails.
+ *
+ * Note: Report request number filtering logic is kept in comments for easy re-enabling
+ * if specific report request numbers need to be enforced again in the future.
  */
 require("dotenv").config();
 
@@ -21,6 +32,16 @@ const {
 } = require("../../utils/cams_wbr22_automation/camsEmailParsingUtils");
 
 const WBR22_SUBJECT_REGEX = /WBR22\.\s*AuM\s+on\s+a\s+specific\s+date\s+by\s+Scheme\s+by\s+Investor/i;
+const TARGET_RECIPIENT_EMAIL = "rajendrashirode@gmail.com";
+
+// The parsed To: header carries the ORIGINAL recipient of each forwarded
+// email, and real WBR22 reports arrive addressed to several different
+// family accounts (rajendrashirode@, kusumdwani@, sanjayshirode93@ ...).
+// Turning this on would silently drop every report not addressed to
+// TARGET_RECIPIENT_EMAIL, so it stays off unless that is really intended.
+const ENFORCE_TARGET_RECIPIENT = false;
+
+// Kept for reference / future use if specific report request numbers are fixed
 const APPROVED_WBR22_REPORT_REQUEST_NUMBERS = new Set([
     "223330489R22",
     "223330413R22",
@@ -36,15 +57,19 @@ function parseWbr22Email(parsed, rawSource) {
     const dateRange = extractReportDateRange(text);
     const dispatchDate = parseCamsDateTime(extractDispatchDateTime(text));
 
+    const reqNo = extractRequestNumber(text, subject);
+    const reportReqNo = extractReportRequestNumber(text) || reqNo || (parsed.messageId ? parsed.messageId.replace(/[^a-zA-Z0-9]/g, "").slice(0, 40) : null) || Date.now().toString();
+
     return {
         messageId: parsed.messageId || null,
         emailDate: emailDate ? emailDate.toISOString() : null,
         emailDateReadable: formatReadableDate(emailDate),
         fromEmail: parsed.from?.value?.[0]?.address || null,
         toEmail: parsed.to?.value?.[0]?.address || null,
+        toEmailList: parsed.to?.value ? parsed.to.value.map(v => v.address?.toLowerCase()).filter(Boolean) : [],
         subject,
-        requestNumber: extractRequestNumber(text, subject),
-        reportRequestNumber: extractReportRequestNumber(text),
+        requestNumber: reqNo,
+        reportRequestNumber: reportReqNo,
         reportNumber: extractReportNumber(text),
         downloadUrl: extractDownloadUrl({ rawSource, html: parsed.html || "", text }),
         reportFromDate: dateRange.from,
@@ -55,8 +80,8 @@ function parseWbr22Email(parsed, rawSource) {
 }
 
 /**
- * Fetch recent WBR22 emails, subject-filter first, then enforce the report
- * request-number allow-list before an archive can enter the pipeline.
+ * Fetch recent WBR22 emails, subject-filter first, recipient-filter next,
+ * and verify presence of download URL before returning.
  */
 async function retrieveWbr22Emails() {
     const client = createImapClient();
@@ -80,10 +105,31 @@ async function retrieveWbr22Emails() {
                     continue;
                 }
 
-                const report = parseWbr22Email(await simpleParser(message.source), message.source);
-                if (APPROVED_WBR22_REPORT_REQUEST_NUMBERS.has(report.reportRequestNumber)) {
-                    reports.push(report);
+                const parsedEmail = await simpleParser(message.source);
+                const report = parseWbr22Email(parsedEmail, message.source);
+
+                // 1. Download URL check: emails without a download URL are filtered out
+                if (!report.downloadUrl) {
+                    console.log(`[WBR22EmailService] Skipping email "${report.subject}" — missing download URL.`);
+                    continue;
                 }
+
+                // 1b. Optional recipient check (OFF by default — see ENFORCE_TARGET_RECIPIENT).
+                if (ENFORCE_TARGET_RECIPIENT && !report.toEmailList.includes(TARGET_RECIPIENT_EMAIL)) {
+                    console.log(`[WBR22EmailService] Skipping email "${report.subject}" — not addressed to ${TARGET_RECIPIENT_EMAIL}.`);
+                    continue;
+                }
+
+                // 2. Report Request Number Filter (Commented out per requirement)
+                // To re-enable filtering by report request numbers in the future, uncomment below:
+                /*
+                if (!APPROVED_WBR22_REPORT_REQUEST_NUMBERS.has(report.reportRequestNumber)) {
+                    console.log(`[WBR22EmailService] Skipping email with unapproved report request number: ${report.reportRequestNumber}`);
+                    continue;
+                }
+                */
+
+                reports.push(report);
             }
         } finally {
             lock.release();
@@ -101,5 +147,6 @@ module.exports = {
     retrieveWbr22Emails,
     parseWbr22Email,
     WBR22_SUBJECT_REGEX,
+    TARGET_RECIPIENT_EMAIL,
     APPROVED_WBR22_REPORT_REQUEST_NUMBERS,
 };
