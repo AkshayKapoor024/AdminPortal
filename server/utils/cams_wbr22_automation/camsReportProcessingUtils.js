@@ -175,6 +175,8 @@ function buildReportIdentifiers(report) {
             report?.reportToDate || null,
         toEmail:
             report?.toEmail || null,
+        arnNo:
+            report?.arnNo || null,
     };
 }
 

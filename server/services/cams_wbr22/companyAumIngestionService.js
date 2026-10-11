@@ -86,6 +86,9 @@ async function processWbr22File(period, file, matchIndex) {
                 periodId: period.id,
                 fileName: file.originalname,
                 fileHash,
+                arnNo: file.arnNo || null,
+                reportFromDate: file.reportFromDate || null,
+                reportToDate: file.reportToDate || null,
                 status: "PENDING",
             },
         }));
@@ -93,7 +96,7 @@ async function processWbr22File(period, file, matchIndex) {
     try {
         await prisma.companyAumFileImport.update({
             where: { id: importRow.id },
-            data: { status: "PROCESSING", errorMessage: null },
+            data: { status: "PROCESSING", errorMessage: null, arnNo: file.arnNo || importRow.arnNo },
         });
 
         // Step 2: parse the file into per-fund closing-asset totals.

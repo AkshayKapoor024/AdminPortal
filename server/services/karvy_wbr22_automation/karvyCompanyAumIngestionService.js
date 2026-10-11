@@ -74,13 +74,21 @@ async function processKarvyWbr22File(period, file, matchIndex) {
     const importRow =
         existingImport ||
         (await prisma.companyAumFileImport.create({
-            data: { periodId: period.id, fileName: file.originalname, fileHash, status: "PENDING" },
+            data: {
+                periodId: period.id,
+                fileName: file.originalname,
+                fileHash,
+                arnNo: file.arnNo || null,
+                reportFromDate: file.reportFromDate || null,
+                reportToDate: file.reportToDate || null,
+                status: "PENDING",
+            },
         }));
 
     try {
         await prisma.companyAumFileImport.update({
             where: { id: importRow.id },
-            data: { status: "PROCESSING", errorMessage: null },
+            data: { status: "PROCESSING", errorMessage: null, arnNo: file.arnNo || importRow.arnNo },
         });
 
         const schemeTotals = parseKarvyWbr22File(file.buffer);
@@ -161,6 +169,7 @@ async function processKarvyWbr22File(period, file, matchIndex) {
                     schemeName: fund.schemeName,
                     category: fund.category,
                     amcCode: fund.amcCode,
+                    arnNo: row.arnNo,
                     aum: row.aum.toNumber(),
                     aaum: row.aaum.toNumber(),
                     daysRecorded: row.daysRecorded,

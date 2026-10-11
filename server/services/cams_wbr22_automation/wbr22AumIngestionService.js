@@ -23,14 +23,15 @@ function summariseStatuses(items) {
 }
 
 /** Run the complete WBR22 CAMS-to-Company-AUM pipeline once. */
-async function runWbr22AumIngestion() {
+async function runWbr22AumIngestion(options = {}) {
     const startedAt = Date.now();
+    const lookbackDays = options.lookbackDays || 14;
 
     try {
         const password = process.env.CAMS_WBR22_REPORT_PASSWORD;
         if (!password) throw new Error("CAMS_WBR22_REPORT_PASSWORD is not configured");
 
-        const emails = await retrieveWbr22Emails();
+        const emails = await retrieveWbr22Emails({ lookbackDays });
         const extractedReports = await processCamsReports(emails, password);
         const extractionSummary = summariseStatuses(extractedReports);
         const readyFiles = [];

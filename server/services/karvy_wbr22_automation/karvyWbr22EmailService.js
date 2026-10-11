@@ -14,7 +14,7 @@
 require("dotenv").config();
 
 const { simpleParser } = require("mailparser");
-const { createImapClient, extractReportDateRange, parseCamsDateTime, extractDispatchDateTime, formatReadableDate } = require("../../utils/cams_wbr22_automation/camsEmailParsingUtils");
+const { createImapClient, extractReportDateRange, parseCamsDateTime, extractDispatchDateTime, formatReadableDate, extractArn } = require("../../utils/cams_wbr22_automation/camsEmailParsingUtils");
 const {
     extractKarvyRefNumber,
     extractKarvyReportNumber,
@@ -33,17 +33,16 @@ const APPROVED_KARVY_WBR22_REPORT_REQUEST_NUMBERS = new Set([
 ]);
 
 /** Convert one MIME email into the metadata shared by the report-extraction service. */
-function parseKarvyWbr22Email(parsed) {
+function parseKarvyWbr22Email(parsed, rawSource = "") {
     const text = parsed.text || "";
     const subject = parsed.subject || "";
     const emailDate = parsed.date ? new Date(parsed.date) : null;
     const dateRange = extractReportDateRange(text);
     const dispatchDate = parseCamsDateTime(extractDispatchDateTime(text));
     const downloadUrl = extractKarvyLandingUrl({ html: parsed.html || "" });
+    const arnNo = extractArn(text, subject, rawSource);
 
     if (!downloadUrl) {
-        // Per the "don't guess" principle: log a diagnostic rather than
-        // silently proceeding with no download link.
         console.warn(
             `[Karvy WBR22 AUM] Could not find a usable download link in email "${subject}" ` +
             `(messageId=${parsed.messageId || "unknown"}) — the HTML "Click Here" / scdelivery.kfintech.com ` +
@@ -58,9 +57,7 @@ function parseKarvyWbr22Email(parsed) {
         fromEmail: parsed.from?.value?.[0]?.address || null,
         toEmail: parsed.to?.value?.[0]?.address || null,
         subject,
-        // Falls back to a short id derived from the messageId if the subject
-        // has no "Ref. No." — the shared report service needs a non-empty
-        // request number to name its temp folder.
+        arnNo,
         reportRequestNumber:
             extractKarvyRefNumber(subject) ||
             (parsed.messageId ? parsed.messageId.replace(/[^a-zA-Z0-9]/g, "").slice(0, 40) : null) ||
@@ -78,8 +75,11 @@ function parseKarvyWbr22Email(parsed) {
  * Fetch recent Karvy WBR22 emails, subject-filter first, then enforce
  * the report request-number allow-list before an archive can enter the
  * pipeline.
+ *
+ * @param {object} [options]
+ * @param {number} [options.lookbackDays=1] Number of days back to search IMAP (defaults to 1 day / 24h for daily Karvy).
  */
-async function retrieveKarvyWbr22Emails() {
+async function retrieveKarvyWbr22Emails({ lookbackDays = 1 } = {}) {
     const client = createImapClient();
     const reports = [];
 
@@ -88,7 +88,7 @@ async function retrieveKarvyWbr22Emails() {
         const lock = await client.getMailboxLock("INBOX");
 
         try {
-            const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+            const cutoff = new Date(Date.now() - lookbackDays * 24 * 60 * 60 * 1000);
             const imapSince = new Date(cutoff);
             imapSince.setHours(0, 0, 0, 0);
 
@@ -107,18 +107,7 @@ async function retrieveKarvyWbr22Emails() {
                     continue;
                 }
 
-                const report = parseKarvyWbr22Email(await simpleParser(message.source));
-
-                // Report Request Number allow-list — DISABLED. Karvy's Ref. No.
-                // changes between reports (real runs with the single approved
-                // number returned 0 emails). The subject filter above is what
-                // identifies these reports now. To enforce specific numbers
-                // again, update APPROVED_KARVY_WBR22_REPORT_REQUEST_NUMBERS and
-                // swap the push below for the commented block:
-                //
-                // if (APPROVED_KARVY_WBR22_REPORT_REQUEST_NUMBERS.has(report.reportRequestNumber)) {
-                //     reports.push(report);
-                // }
+                const report = parseKarvyWbr22Email(await simpleParser(message.source), message.source);
                 reports.push(report);
             }
         } finally {

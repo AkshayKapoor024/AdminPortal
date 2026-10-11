@@ -35,6 +35,9 @@ async function buildWbr22CronFile(extractedReport) {
         file: {
             originalname: path.basename(csvPath),
             buffer: await fs.readFile(csvPath),
+            arnNo: extractedReport?.identifiers?.arnNo || null,
+            reportFromDate: extractedReport?.identifiers?.reportFromDate || null,
+            reportToDate: extractedReport?.identifiers?.reportToDate || null,
         },
     };
 }

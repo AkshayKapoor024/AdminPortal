@@ -425,13 +425,21 @@ function extractReportNumber(text) {
 
 /** Extract the "From Date" / "To Date" pair describing the report's coverage period. */
 function extractReportDateRange(text) {
+    if (!text) {
+        return { from: null, to: null };
+    }
+
+    // Decode quoted-printable & strip HTML tags so table cells like
+    // <td> From Date </td> <td> 26/09/2026 </td> collapse into clean readable text.
+    const cleanText = normalizeEmailSource(text).replace(/<[^>]+>/g, " ");
+
     const from = extractValue(
-        text,
+        cleanText,
         /From\s+Date\s*[:\-]?\s*(\d{2}\/\d{2}\/\d{4})/i
     );
 
     const to = extractValue(
-        text,
+        cleanText,
         /To\s+Date\s*[:\-]?\s*(\d{2}\/\d{2}\/\d{4})/i
     );
 
@@ -510,6 +518,29 @@ function formatReadableDate(date) {
     }).format(date);
 }
 
+/** Extract distributor ARN number (e.g. "ARN-11923") or registered distributor email from email text/subject/raw source. */
+function extractArn(text, subject, rawSource = "") {
+    const combinedText = normalizeEmailSource(`${subject || ""}\n${text || ""}\n${rawSource || ""}`).replace(/<[^>]+>/g, " ");
+
+    const brokerCodeMatch = combinedText.match(/Broker\s+Code\s*[:\t\-]?\s*([A-Za-z0-9_-]+)/i);
+    if (brokerCodeMatch && brokerCodeMatch[1]) {
+        return brokerCodeMatch[1].trim();
+    }
+
+    const arnDirectMatch = combinedText.match(/(ARN-?\d+[A-Za-z0-9]*)/i);
+    if (arnDirectMatch) {
+        return arnDirectMatch[1].trim();
+    }
+
+    // For CAMS emails where explicit ARN-xxx is absent, extract the registered distributor email
+    const emailMatch = combinedText.match(/Email\s*[:\-]?\s*([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/i);
+    if (emailMatch && emailMatch[1]) {
+        return emailMatch[1].trim().toLowerCase();
+    }
+
+    return null;
+}
+
 module.exports = {
     createImapClient,
     extractValue,
@@ -528,4 +559,5 @@ module.exports = {
     parseCamsDateTime,
     extractDispatchDateTime,
     formatReadableDate,
+    extractArn,
 };

@@ -29,6 +29,7 @@ const {
     parseCamsDateTime,
     extractDispatchDateTime,
     formatReadableDate,
+    extractArn,
 } = require("../../utils/cams_wbr22_automation/camsEmailParsingUtils");
 
 const WBR22_SUBJECT_REGEX = /WBR22\.\s*AuM\s+on\s+a\s+specific\s+date\s+by\s+Scheme\s+by\s+Investor/i;
@@ -50,12 +51,13 @@ const APPROVED_WBR22_REPORT_REQUEST_NUMBERS = new Set([
 ]);
 
 /** Convert one MIME email into the metadata shared by CAMS report services. */
-function parseWbr22Email(parsed, rawSource) {
+function parseWbr22Email(parsed, rawSource = "") {
     const text = parsed.text || "";
     const subject = parsed.subject || "";
     const emailDate = parsed.date ? new Date(parsed.date) : null;
     const dateRange = extractReportDateRange(text);
     const dispatchDate = parseCamsDateTime(extractDispatchDateTime(text));
+    const arnNo = extractArn(text, subject, rawSource);
 
     const reqNo = extractRequestNumber(text, subject);
     const reportReqNo = extractReportRequestNumber(text) || reqNo || (parsed.messageId ? parsed.messageId.replace(/[^a-zA-Z0-9]/g, "").slice(0, 40) : null) || Date.now().toString();
@@ -68,6 +70,7 @@ function parseWbr22Email(parsed, rawSource) {
         toEmail: parsed.to?.value?.[0]?.address || null,
         toEmailList: parsed.to?.value ? parsed.to.value.map(v => v.address?.toLowerCase()).filter(Boolean) : [],
         subject,
+        arnNo,
         requestNumber: reqNo,
         reportRequestNumber: reportReqNo,
         reportNumber: extractReportNumber(text),
@@ -82,8 +85,11 @@ function parseWbr22Email(parsed, rawSource) {
 /**
  * Fetch recent WBR22 emails, subject-filter first, recipient-filter next,
  * and verify presence of download URL before returning.
+ *
+ * @param {object} [options]
+ * @param {number} [options.lookbackDays=14] Number of days back to search IMAP.
  */
-async function retrieveWbr22Emails() {
+async function retrieveWbr22Emails({ lookbackDays = 14 } = {}) {
     const client = createImapClient();
     const reports = [];
 
@@ -92,7 +98,7 @@ async function retrieveWbr22Emails() {
         const lock = await client.getMailboxLock("INBOX");
 
         try {
-            const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+            const cutoff = new Date(Date.now() - lookbackDays * 24 * 60 * 60 * 1000);
             const imapSince = new Date(cutoff);
             imapSince.setHours(0, 0, 0, 0);
 
@@ -119,15 +125,6 @@ async function retrieveWbr22Emails() {
                     console.log(`[WBR22EmailService] Skipping email "${report.subject}" — not addressed to ${TARGET_RECIPIENT_EMAIL}.`);
                     continue;
                 }
-
-                // 2. Report Request Number Filter (Commented out per requirement)
-                // To re-enable filtering by report request numbers in the future, uncomment below:
-                /*
-                if (!APPROVED_WBR22_REPORT_REQUEST_NUMBERS.has(report.reportRequestNumber)) {
-                    console.log(`[WBR22EmailService] Skipping email with unapproved report request number: ${report.reportRequestNumber}`);
-                    continue;
-                }
-                */
 
                 reports.push(report);
             }

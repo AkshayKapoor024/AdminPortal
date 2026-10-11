@@ -405,6 +405,9 @@ model CompanyAumFileImport {
 
   fileName             String?         @map("file_name")
   fileHash             String          @map("file_hash")
+  arnNo                String?         @map("arn_no")
+  reportFromDate       String?         @map("report_from_date")
+  reportToDate         String?         @map("report_to_date")
 
   status               AumImportStatus @default(PENDING)
 
@@ -422,6 +425,7 @@ model CompanyAumFileImport {
 
   @@unique([periodId, fileHash])
   @@index([periodId])
+  @@index([arnNo])
   @@map("company_aum_file_imports")
 }
 

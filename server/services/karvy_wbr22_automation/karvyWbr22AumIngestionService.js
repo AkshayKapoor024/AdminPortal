@@ -26,14 +26,15 @@ function summariseStatuses(items) {
 }
 
 /** Run the complete Karvy WBR22-to-Company-AUM pipeline once. */
-async function runKarvyWbr22AumIngestion() {
+async function runKarvyWbr22AumIngestion(options = {}) {
     const startedAt = Date.now();
+    const lookbackDays = options.lookbackDays || 1;
 
     try {
         const password = process.env.KARVY_WBR22_REPORT_PASSWORD;
         if (!password) throw new Error("KARVY_WBR22_REPORT_PASSWORD is not configured");
 
-        const emails = await retrieveKarvyWbr22Emails();
+        const emails = await retrieveKarvyWbr22Emails({ lookbackDays });
         const extractedReports = await processCamsReports(emails, password);
         const extractionSummary = summariseStatuses(extractedReports);
         const readyFiles = [];
