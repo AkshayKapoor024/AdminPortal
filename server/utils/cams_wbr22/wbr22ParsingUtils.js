@@ -23,7 +23,7 @@
  * SUM(CLOSING_ASSETS) for every row sharing the same SCHEME_NAME.
  */
 
-const CustomError = require("../customError");
+import CustomError from "../customError.js";
 
 /** Strip a single stray trailing apostrophe from a field, if present. */
 function stripTrailingQuote(value) {
@@ -133,4 +133,4 @@ function parseWbr22File(buffer) {
     return schemeTotals;
 }
 
-module.exports = { parseWbr22File, stripTrailingQuote, splitCamsLine };
+export { parseWbr22File, stripTrailingQuote, splitCamsLine };

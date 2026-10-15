@@ -24,7 +24,7 @@
  * `services/industryAumService.js`, using `utils/aumCategoryResolver.js`.
  */
 
-const XLSX = require("xlsx");
+import XLSX from "xlsx";
 
 // -----------------------------------------------------------------------------
 // Row marker patterns
@@ -188,7 +188,7 @@ function parseAmfiWorkbookRows(buffer) {
     return classifiedRows;
 }
 
-module.exports = {
+export {
     downloadAmfiExcel,
     parseAmfiWorkbookRows,
     classifyAmfiRow,

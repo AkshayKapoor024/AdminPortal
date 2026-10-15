@@ -23,16 +23,16 @@
  * regardless of which RTA services which fund.
  */
 
-const crypto = require("crypto");
+import crypto from "crypto";
 
-const { prisma } = require("../../init/prisma");
-const { findOrCreateAumPeriod, getFinancialYearAndQuarterForDate } = require("../../utils/industry_aum/aumPeriodUtils");
-const { createCategoryResolver } = require("../../utils/industry_aum/aumCategoryResolver");
-const { matchSchemeName, normalizeSchemeName } = require("../../utils/cams_wbr22/schemeNameMatchingUtils");
-const { parseKarvyWbr22File } = require("../../utils/karvy_wbr22_automation/karvyWbr22ParsingUtils");
-const { prepareCompanyAumMatchIndex } = require("../cams_wbr22/companyAumIngestionService");
-const { upsertDailyCompanyAum } = require("../../utils/cams_wbr22/companyAumUpsertUtils");
-const CustomError = require("../../utils/customError");
+import { prisma } from "../../init/prisma.js";
+import { findOrCreateAumPeriod, getFinancialYearAndQuarterForDate } from "../../utils/industry_aum/aumPeriodUtils.js";
+import { createCategoryResolver } from "../../utils/industry_aum/aumCategoryResolver.js";
+import { matchSchemeName, normalizeSchemeName } from "../../utils/cams_wbr22/schemeNameMatchingUtils.js";
+import { parseKarvyWbr22File } from "../../utils/karvy_wbr22_automation/karvyWbr22ParsingUtils.js";
+import { prepareCompanyAumMatchIndex } from "../cams_wbr22/companyAumIngestionService.js";
+import { upsertDailyCompanyAum } from "../../utils/cams_wbr22/companyAumUpsertUtils.js";
+import CustomError from "../../utils/customError.js";
 
 /** SHA-256 hash, used for file-level dedup. */
 function sha256(value) {
@@ -271,4 +271,4 @@ async function ingestKarvyCompanyAumFiles({ files, quarterDateIso, matchIndex: s
     return { financialYear, quarter, periodId: period.id, files: fileResults };
 }
 
-module.exports = { ingestKarvyCompanyAumFiles };
+export { ingestKarvyCompanyAumFiles };

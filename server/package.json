@@ -2,33 +2,34 @@
   "name": "server",
   "version": "1.0.0",
   "main": "index.js",
-  "type": "commonjs",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node --env-file=.env index.js",
+    "dev": "node --env-file=.env --watch index.js"
   },
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@google-cloud/local-auth": "^3.0.1",
-    "@prisma/adapter-pg": "^7.9.1",
-    "@prisma/client": "^7.9.1",
+    "@prisma/adapter-pg": "^7.10.0",
+    "@prisma/client-runtime-utils": "^7.10.0",
     "bcrypt": "^6.0.0",
-    "connect-pg-simple": "^10.0.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "csv-parse": "^6.2.1",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "express-session": "^1.19.0",
-    "googleapis": "^176.0.0",
     "imapflow": "^1.7.2",
     "joi": "^18.2.3",
     "mailparser": "^3.9.15",
     "multer": "^2.2.0",
     "node-cron": "^4.6.0",
-    "pg": "^8.23.0",
+    "pg": "^8.23.1",
     "prisma": "^7.9.1",
+    "swagger-jsdoc": "^6.3.0",
+    "swagger-ui-express": "^5.0.1",
     "xlsx": "^0.18.5"
   }
 }

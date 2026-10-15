@@ -4,8 +4,8 @@
  * Runs daily at 01:00 AM IST to crawl and update the BSE Star Scheme Master list in DB.
  */
 
-const cron = require("node-cron");
-const { syncBseSchemeMasterData } = require("../services/bse_star_master/bseStarSchemeMasterIngestionService");
+import cron from "node-cron";
+import { syncBseSchemeMasterData } from "../services/bse_star_master/bseStarSchemeMasterIngestionService.js";
 
 let running = false;
 
@@ -35,4 +35,4 @@ cron.schedule(
     { timezone: "Asia/Kolkata" }
 );
 
-module.exports = { runBseStarSchemeMasterIngestion };
+export { runBseStarSchemeMasterIngestion };

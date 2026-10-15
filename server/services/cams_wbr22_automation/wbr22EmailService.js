@@ -16,10 +16,10 @@
  * Note: Report request number filtering logic is kept in comments for easy re-enabling
  * if specific report request numbers need to be enforced again in the future.
  */
-require("dotenv").config();
+import 'dotenv/config'
 
-const { simpleParser } = require("mailparser");
-const {
+import { simpleParser } from "mailparser";
+import {
     createImapClient,
     extractDownloadUrl,
     extractRequestNumber,
@@ -30,7 +30,7 @@ const {
     extractDispatchDateTime,
     formatReadableDate,
     extractArn,
-} = require("../../utils/cams_wbr22_automation/camsEmailParsingUtils");
+} from "../../utils/cams_wbr22_automation/camsEmailParsingUtils.js";
 
 const WBR22_SUBJECT_REGEX = /WBR22\.\s*AuM\s+on\s+a\s+specific\s+date\s+by\s+Scheme\s+by\s+Investor/i;
 const TARGET_RECIPIENT_EMAIL = "rajendrashirode@gmail.com";
@@ -140,7 +140,7 @@ async function retrieveWbr22Emails({ lookbackDays = 14 } = {}) {
     }
 }
 
-module.exports = {
+export {
     retrieveWbr22Emails,
     parseWbr22Email,
     WBR22_SUBJECT_REGEX,

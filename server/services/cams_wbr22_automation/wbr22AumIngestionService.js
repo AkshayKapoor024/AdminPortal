@@ -6,13 +6,13 @@
  * before the importer creates any period or import records, so an expired
  * credential or unavailable master list cannot leave partial AUM writes.
  */
-require("dotenv").config();
+import 'dotenv/config'
 
-const { retrieveWbr22Emails } = require("./wbr22EmailService");
-const { processCamsReports } = require("./reportService");
-const { prepareCompanyAumMatchIndex, ingestCompanyAumFiles } = require("../cams_wbr22/companyAumIngestionService");
-const { buildWbr22CronFile } = require("../../utils/cams_wbr22_automation/wbr22CronFileUtils");
-const { logWbr22AumJob } = require("../../utils/cams_wbr22_automation/wbr22AumJobLogger");
+import { retrieveWbr22Emails } from "./wbr22EmailService.js";
+import { processCamsReports } from "./reportService.js";
+import { prepareCompanyAumMatchIndex, ingestCompanyAumFiles } from "../cams_wbr22/companyAumIngestionService.js";
+import { buildWbr22CronFile } from "../../utils/cams_wbr22_automation/wbr22CronFileUtils.js";
+import { logWbr22AumJob } from "../../utils/cams_wbr22_automation/wbr22AumJobLogger.js";
 
 function summariseStatuses(items) {
     return items.reduce((summary, item) => {
@@ -100,4 +100,4 @@ async function runWbr22AumIngestion(options = {}) {
     }
 }
 
-module.exports = { runWbr22AumIngestion, summariseStatuses };
+export { runWbr22AumIngestion, summariseStatuses };

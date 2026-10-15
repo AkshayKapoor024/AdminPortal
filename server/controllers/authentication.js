@@ -6,15 +6,15 @@
  * always stripped out of any user object sent back in a response.
  */
 
-const { prisma } = require('../init/prisma')
-const bcrypt = require('bcrypt')
+import { prisma } from '../init/prisma.js';
+import bcrypt from 'bcrypt'
 
-module.exports.signup = async (req, res) => {
+export const signup = async (req, res) => {
     try {
 
         const { name, username, email, password, role } = req.body
 
-        let existingUser = await prisma.user.findUnique({
+        let existingUser = await prisma.adminUser.findUnique({
             where: {
                 email: email
             }
@@ -29,7 +29,7 @@ module.exports.signup = async (req, res) => {
             // Hash user password
             const passwordHash = await bcrypt.hash(password, 12)
 
-            const user = await prisma.user.create({
+            const user = await prisma.adminUser.create({
                 data: {
                     name: name,
                     username: username,
@@ -57,13 +57,13 @@ module.exports.signup = async (req, res) => {
     }
 }
 
-module.exports.login = async (req, res) => {
+export const login = async (req, res) => {
     try {
 
         const { email, password } = req.body
 
         // Find user exists
-        const user = await prisma.user.findUnique({
+        const user = await prisma.adminUser.findUnique({
             where: {
                 email: email
             },
@@ -102,10 +102,10 @@ module.exports.login = async (req, res) => {
     }
 }
 
-module.exports.getUsers = async (req, res) => {
+export const getUsers = async (req, res) => {
     try {
 
-        const users = await prisma.user.findMany({
+        const users = await prisma.adminUser.findMany({
             include: {
                 tasks: true
             }
@@ -123,7 +123,7 @@ module.exports.getUsers = async (req, res) => {
     }
 }
 
-module.exports.getSingleUser = async (req, res) => {
+export const getSingleUser = async (req, res) => {
     try {
 
         const { id } = req.params
@@ -134,7 +134,7 @@ module.exports.getSingleUser = async (req, res) => {
             })
         }
 
-        const user = await prisma.user.findUnique({
+        const user = await prisma.adminUser.findUnique({
             where: {
                 id: id
             },
@@ -161,7 +161,7 @@ module.exports.getSingleUser = async (req, res) => {
     }
 }
 
-module.exports.logout = (req, res) => {
+export const logout = (req, res) => {
     try {
         req.session.destroy((error) => {
             if (error) {
@@ -190,7 +190,7 @@ module.exports.logout = (req, res) => {
  * Used by the frontend on boot to check if the current session is valid.
  * If session_id is set, returns the cached user from session.
  */
-module.exports.isAuthenticatedController = async (req, res) => {
+export const isAuthenticatedController = async (req, res) => {
   try {
     if (!req.session.session_id || !req.session.user) {
       return res.status(401).json({

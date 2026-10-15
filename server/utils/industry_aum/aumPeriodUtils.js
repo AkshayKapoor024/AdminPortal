@@ -136,7 +136,7 @@ function getFinancialYearAndQuarterForDate(date) {
     };
 }
 
-module.exports = {
+export {
     resolveQuarterDates,
     findOrCreateAumPeriod,
     getFinancialYearAndQuarterForDate,

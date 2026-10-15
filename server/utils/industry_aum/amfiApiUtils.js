@@ -137,7 +137,7 @@ async function fetchAvailableQuarters(fyId) {
     return quarterlyData;
 }
 
-module.exports = {
+export {
     AMFI_FIRST_FINANCIAL_YEAR,
     getQuarterFromPeriod,
     getFinancialYearForDate,

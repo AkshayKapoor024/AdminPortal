@@ -156,7 +156,7 @@ async function createCategoryResolver(prisma) {
     return { resolveOrCreateCategory, stats };
 }
 
-module.exports = {
+export {
     normalizeCategoryName,
     generateCategoryCode,
     createCategoryResolver,

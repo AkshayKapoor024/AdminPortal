@@ -4,9 +4,8 @@
  * This file only owns *scheduling* and *overlap protection*. The actual
  * pipeline logic lives in `services/camsIngestionService.js`.
  */
-const cron = require("node-cron");
-const { runCamsIngestion: runPipeline } = require("../services/cams_transactions/camsIngestionService");
-
+import cron from "node-cron";
+import { runCamsIngestion as runPipeline } from "../services/cams_transactions/camsIngestionService.js";
 /** True while a pipeline run is in progress, to prevent overlapping runs. */
 let running = false;
 
@@ -36,4 +35,4 @@ cron.schedule("0 8 * * *", () => {
     runCamsIngestion().catch(() => {});
 }, { timezone: "Asia/Kolkata" });
 
-module.exports = { runCamsIngestion };
+export { runCamsIngestion };

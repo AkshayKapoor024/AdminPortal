@@ -11,13 +11,13 @@
  * (`jobs/karvyTransactionIngestionJob.js`) and manually
  * (`temp/runKarvyTransactionIngestionTest.js`) for identical behaviour.
  */
-require("dotenv").config();
-const { retrieveKarvyTransactionEmails } = require("./emailService");
-const { processCamsReports } = require("../cams_wbr22_automation/reportService");
-const { processKarvyCsvReports } = require("./csvService");
-const { persistKarvyTransactionReports } = require("./karvyDatabaseService");
-const { logKarvyTransactionsJob } = require("../../utils/karvy_transactions/karvyJobLogger");
-const { buildIngestionSummary } = require("../../utils/karvy_transactions/karvyIngestionSummary");
+import 'dotenv/config'
+import { retrieveKarvyTransactionEmails } from "./emailService.js";
+import { processCamsReports } from "../cams_wbr22_automation/reportService.js";
+import { processKarvyCsvReports } from "./csvService.js";
+import { persistKarvyTransactionReports } from "./karvyDatabaseService.js";
+import { logKarvyTransactionsJob } from "../../utils/karvy_transactions/karvyJobLogger.js";
+import { buildIngestionSummary } from "../../utils/karvy_transactions/karvyIngestionSummary.js";
 
 /**
  * Run the full Karvy transactions ingestion pipeline once, end to end.
@@ -58,4 +58,4 @@ async function runKarvyTransactionIngestion() {
     }
 }
 
-module.exports = { runKarvyTransactionIngestion };
+export { runKarvyTransactionIngestion };

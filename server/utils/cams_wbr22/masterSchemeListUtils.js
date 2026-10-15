@@ -21,7 +21,7 @@
  * pipeline stays the same.
  */
 
-const CustomError = require("../customError");
+import CustomError from "../customError.js";
 
 const MASTER_SCHEME_LIST_URL = "https://starmfv2demo.bseindia.com/api/master_scheme_list";
 
@@ -207,5 +207,5 @@ async function fetchMasterSchemeListFromDb() {
     return schemes;
 }
 
-module.exports = { fetchMasterSchemeList, fetchMasterSchemeListFromDb, extractSchemeRows, pickField };
+export { fetchMasterSchemeList, fetchMasterSchemeListFromDb, extractSchemeRows, pickField };
 

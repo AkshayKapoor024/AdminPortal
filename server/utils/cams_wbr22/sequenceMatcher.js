@@ -105,4 +105,4 @@ function sequenceMatcherRatio(a, b) {
     return (2 * matches) / (left.length + right.length);
 }
 
-module.exports = { sequenceMatcherRatio };
+export { sequenceMatcherRatio };

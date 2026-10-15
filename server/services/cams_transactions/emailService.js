@@ -20,12 +20,12 @@
  * into a clean report object) and `retrieveCamsEmails` (the exported
  * function that runs the whole retrieval step end-to-end).
  */
-require("dotenv").config();
+import 'dotenv/config'
 
-const { simpleParser } = require("mailparser");
-const fs = require("fs/promises");
+import { simpleParser } from "mailparser";
+import fs from "fs/promises";
 
-const {
+import {
     createImapClient,
     extractDownloadUrl,
     extractRequestNumber,
@@ -36,7 +36,7 @@ const {
     extractDispatchDateTime,
     formatReadableDate,
     extractAllCamsZipUrls,
-} = require("../../utils/cams_wbr22_automation/camsEmailParsingUtils");
+} from "../../utils/cams_wbr22_automation/camsEmailParsingUtils.js";
 
 // -----------------------------------------------------------------------------
 // CAMS subject matcher
@@ -400,4 +400,4 @@ async function retrieveCamsEmails() {
 }
 
 /** Email retrieval service; orchestration is performed by camsIngestionJob. */
-module.exports = { retrieveCamsEmails };
+export { retrieveCamsEmails };

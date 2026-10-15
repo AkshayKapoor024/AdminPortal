@@ -4,15 +4,15 @@
 // run the matching Joi schema against `req.body`, and either let the
 // request continue (`next()`) or throw a 400 CustomError describing the
 // first validation problem found.
-const ValidateSignup = require('../utils/ValidateSignup')
-const ValidateLogin = require('../utils/ValidateLogin')
-const ValidateTask = require('../utils/ValidateTask.js')
-const ValidateLead = require('../utils/ValidateLead.js')
-const ValidateAnalytics = require('../utils/ValidateAnalytics.js')
-const customError = require('../utils/customError.js')
+import ValidateSignup from '../utils/ValidateSignup.js'
+import ValidateLogin from '../utils/ValidateLogin.js'
+import ValidateTask from '../utils/ValidateTask.js'
+import ValidateLead from '../utils/ValidateLead.js'
+import ValidateAnalytics from '../utils/ValidateAnalytics.js'
+import customError from '../utils/customError.js'
 
 /** Validates a signup (new user) request body before creating an account. */
-module.exports.SignupValidate = (req, res, next) => {
+export const SignupValidate = (req, res, next) => {
     const response = ValidateSignup.validate(req.body)
 
     if (response.error) {
@@ -23,7 +23,7 @@ module.exports.SignupValidate = (req, res, next) => {
 }
 
 /** Validates a login request body before attempting authentication. */
-module.exports.LoginValidate = (req, res, next) => {
+export const LoginValidate = (req, res, next) => {
     const response = ValidateLogin.validate(req.body)
 
     if (response.error) {
@@ -34,7 +34,7 @@ module.exports.LoginValidate = (req, res, next) => {
 }
 
 /** Validates a task request body before creating/updating a task. */
-module.exports.TaskValidate = (req, res, next) => {
+export const TaskValidate = (req, res, next) => {
     const response = ValidateTask.validate(req.body)
 
     if (response.error) {
@@ -45,7 +45,7 @@ module.exports.TaskValidate = (req, res, next) => {
 }
 
 /** Validates a lead request body before creating/updating a lead. */
-module.exports.LeadValidate = (req, res, next) => {
+export const LeadValidate = (req, res, next) => {
     const response = ValidateLead.validate(req.body)
 
     if (response.error) {
@@ -56,7 +56,7 @@ module.exports.LeadValidate = (req, res, next) => {
 }
 
 /** Validates an analytics request (query or body) before processing. */
-module.exports.AnalyticsValidate = (req, res, next) => {
+export const AnalyticsValidate = (req, res, next) => {
     const response = ValidateAnalytics.validate({ ...req.query, ...req.body })
 
     if (response.error) {
@@ -72,7 +72,7 @@ module.exports.AnalyticsValidate = (req, res, next) => {
  * Checks for a `session_id` set on the Express session (created at login)
  * and rejects the request with 401 if it's missing.
  */
-module.exports.isAuthenticated = async (
+export const isAuthenticated = async (
     req,
     res,
     next

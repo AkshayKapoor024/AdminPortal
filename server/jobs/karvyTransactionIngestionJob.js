@@ -4,8 +4,8 @@
  * This file only owns *scheduling* and *overlap protection*. The actual
  * pipeline logic lives in `services/karvy_transactions/karvyIngestionService.js`.
  */
-const cron = require("node-cron");
-const { runKarvyTransactionIngestion: runPipeline } = require("../services/karvy_transactions/karvyIngestionService");
+import cron from "node-cron";
+import { runKarvyTransactionIngestion as runPipeline } from '../services/karvy_transactions/karvyIngestionService.js';
 
 /** True while a pipeline run is in progress, to prevent overlapping runs. */
 let running = false;
@@ -39,4 +39,4 @@ cron.schedule("30 8 * * *", () => {
     runKarvyTransactionIngestion().catch(() => {});
 }, { timezone: "Asia/Kolkata" });
 
-module.exports = { runKarvyTransactionIngestion };
+export {runKarvyTransactionIngestion}

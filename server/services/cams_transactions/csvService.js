@@ -20,11 +20,11 @@
  * `processCamsCsvReports` (handle a batch of reports).
  */
 
-const CustomError = require("../../utils/customError");
-const {
+import CustomError from "../../utils/customError.js";
+import {
     isProcessableReport,
     parseCsvFile,
-} = require("../../utils/cams_transactions/camsCsvParsingUtils");
+} from "../../utils/cams_transactions/camsCsvParsingUtils.js";
 
 // ---------------------------------------------------------------------
 // Single report processing
@@ -204,7 +204,7 @@ async function processCamsCsvReports(reports) {
 // Exports
 // ---------------------------------------------------------------------
 
-module.exports = {
+export {
     processCsvReport,
     processCamsCsvReports,
 };

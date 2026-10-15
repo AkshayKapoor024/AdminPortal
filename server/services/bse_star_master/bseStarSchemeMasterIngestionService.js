@@ -6,10 +6,10 @@
  * and bulk inserting the updated master scheme list into PostgreSQL.
  */
 
-const { prisma } = require("../../init/prisma");
-const { fetchLatestBseSchemeMasterText } = require("../../utils/bse_star_master/bseStarScraperUtils");
-const { parseBseSchemeMasterText } = require("../../utils/bse_star_master/bseStarParserUtils");
-const CustomError = require("../../utils/customError");
+import { prisma } from "../../init/prisma.js";
+import { fetchLatestBseSchemeMasterText } from "../../utils/bse_star_master/bseStarScraperUtils.js";
+import { parseBseSchemeMasterText } from "../../utils/bse_star_master/bseStarParserUtils.js";
+import CustomError from "../../utils/customError.js";
 
 const BATCH_SIZE = 1000;
 
@@ -70,4 +70,4 @@ async function syncBseSchemeMasterData(options = {}) {
     };
 }
 
-module.exports = { syncBseSchemeMasterData };
+export { syncBseSchemeMasterData };

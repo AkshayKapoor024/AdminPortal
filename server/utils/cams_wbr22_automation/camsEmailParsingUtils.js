@@ -18,7 +18,7 @@
  * end-to-end email retrieval step of the CAMS pipeline.
  */
 
-const { ImapFlow } = require("imapflow");
+import { ImapFlow } from "imapflow";
 
 // -----------------------------------------------------------------------------
 // Gmail IMAP client factory
@@ -541,7 +541,7 @@ function extractArn(text, subject, rawSource = "") {
     return null;
 }
 
-module.exports = {
+export {
     createImapClient,
     extractValue,
     decodeHtmlEntities,

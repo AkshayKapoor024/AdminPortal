@@ -13,4 +13,4 @@ class customError extends Error{
         this.status=status
     }
 }
-module.exports = customError
+export default customError

@@ -12,10 +12,10 @@
  * left untouched here per instructions; this file uses the correct
  * two-levels-up path so Karvy's own log actually lands in `server/logs/`.
  */
-const fs = require("fs/promises");
-const path = require("path");
+import fs from "fs/promises";
+import path from "path";
 
-const LOG_DIRECTORY = path.join(__dirname, "..", "..", "logs");
+const LOG_DIRECTORY = path.join(import.meta.dirname, "..", "..", "logs");
 
 /**
  * Append one structured log line (as JSON) to
@@ -31,4 +31,4 @@ async function logKarvyTransactionsJob(level, message, details = {}) {
     await fs.appendFile(path.join(LOG_DIRECTORY, "karvy-transactions-ingestion.log"), `${entry}\n`, "utf8");
 }
 
-module.exports = { logKarvyTransactionsJob };
+export { logKarvyTransactionsJob };

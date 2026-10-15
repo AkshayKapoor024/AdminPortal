@@ -12,4 +12,4 @@ function wrapAsync(fn){
         fn(req,res,next).catch(err=>next(err))
     }
 }
-module.exports = wrapAsync
+export default wrapAsync

@@ -16,7 +16,7 @@
  * together or not at all.
  */
 
-const { createCategoryResolver } = require("../../utils/industry_aum/aumCategoryResolver");
+import { createCategoryResolver } from "../../utils/industry_aum/aumCategoryResolver.js";
 
 /**
  * Walk one quarter's classified rows, resolving/creating categories as
@@ -110,4 +110,4 @@ async function persistIndustryAumForQuarter(prisma, periodId, classifiedRows) {
     });
 }
 
-module.exports = { persistIndustryAumForQuarter };
+export { persistIndustryAumForQuarter };

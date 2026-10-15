@@ -8,7 +8,7 @@
  * CSV. Kept as a fully separate file (not shared with the CAMS one)
  * since the two column sets have nothing in common.
  */
-const crypto = require("crypto");
+import crypto from "crypto";
 
 /** Maps each Karvy "Transaction Feeds Report" CSV header to a first-class Prisma column. No raw CSV/JSON is persisted. */
 const KARVY_TRANSACTION_FIELDS = {
@@ -151,4 +151,4 @@ function validDate(value) {
     return Number.isNaN(date.getTime()) ? null : date;
 }
 
-module.exports = { KARVY_TRANSACTION_FIELDS, reportFingerprint, transactionData, transactionFingerprint, validDate };
+export { KARVY_TRANSACTION_FIELDS, reportFingerprint, transactionData, transactionFingerprint, validDate };

@@ -42,4 +42,4 @@ function getDateLabel(date) {
     
 }
 
-module.exports = getDateLabel
+export default getDateLabel

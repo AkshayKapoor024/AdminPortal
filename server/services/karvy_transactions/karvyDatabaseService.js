@@ -9,9 +9,9 @@
  * `KarvyTransactionReport`/`KarvyTransaction` tables using the
  * Karvy-specific field mapping and fingerprinting helpers.
  */
-const { prisma } = require("../../init/prisma");
-const { transactionData, transactionFingerprint } = require("../../utils/karvy_transactions/karvyTransactionPersistence");
-const { buildReportData, findExistingKarvyReport } = require("../../utils/karvy_transactions/karvyReportPersistence");
+import { prisma } from "../../init/prisma.js";
+import { transactionData, transactionFingerprint } from "../../utils/karvy_transactions/karvyTransactionPersistence.js";
+import { buildReportData, findExistingKarvyReport } from "../../utils/karvy_transactions/karvyReportPersistence.js";
 
 /**
  * Persist a single parsed Karvy report (and its transactions, if any)
@@ -99,4 +99,4 @@ async function persistKarvyTransactionReports(reports) {
     return results;
 }
 
-module.exports = { persistKarvyTransactionReport, persistKarvyTransactionReports };
+export { persistKarvyTransactionReport, persistKarvyTransactionReports };

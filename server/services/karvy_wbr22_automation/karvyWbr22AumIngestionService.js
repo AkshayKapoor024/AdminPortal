@@ -8,14 +8,14 @@
  * any period or import records, so an expired credential or
  * unavailable master list cannot leave partial AUM writes.
  */
-require("dotenv").config();
+import 'dotenv/config'
 
-const { retrieveKarvyWbr22Emails } = require("./karvyWbr22EmailService");
-const { processCamsReports } = require("../cams_wbr22_automation/reportService");
-const { prepareCompanyAumMatchIndex } = require("../cams_wbr22/companyAumIngestionService");
-const { ingestKarvyCompanyAumFiles } = require("./karvyCompanyAumIngestionService");
-const { buildWbr22CronFile } = require("../../utils/cams_wbr22_automation/wbr22CronFileUtils");
-const { logKarvyWbr22AumJob } = require("../../utils/karvy_wbr22_automation/karvyWbr22JobLogger");
+import { retrieveKarvyWbr22Emails } from "./karvyWbr22EmailService.js";
+import { processCamsReports } from "../cams_wbr22_automation/reportService.js";
+import { prepareCompanyAumMatchIndex } from "../cams_wbr22/companyAumIngestionService.js";
+import { ingestKarvyCompanyAumFiles } from "./karvyCompanyAumIngestionService.js";
+import { buildWbr22CronFile } from "../../utils/cams_wbr22_automation/wbr22CronFileUtils.js";
+import { logKarvyWbr22AumJob } from "../../utils/karvy_wbr22_automation/karvyWbr22JobLogger.js";
 
 function summariseStatuses(items) {
     return items.reduce((summary, item) => {
@@ -106,4 +106,4 @@ async function runKarvyWbr22AumIngestion(options = {}) {
     }
 }
 
-module.exports = { runKarvyWbr22AumIngestion, summariseStatuses };
+export {runKarvyWbr22AumIngestion, summariseStatuses };

@@ -3,7 +3,7 @@
  * Maps every CSV header to a Prisma field and provides stable SHA-256
  * idempotency fingerprints plus safe date conversion.
  */
-const crypto = require("crypto");
+import crypto from "crypto";
 
 /* Maps each CAMS CSV header to a first-class Prisma column. No raw CSV/JSON is persisted. */
 const CAMS_TRANSACTION_FIELDS = {
@@ -78,4 +78,4 @@ function validDate(value) {
     return Number.isNaN(date.getTime()) ? null : date;
 }
 
-module.exports = { CAMS_TRANSACTION_FIELDS, reportFingerprint, transactionData, transactionFingerprint, validDate };
+export { CAMS_TRANSACTION_FIELDS, reportFingerprint, transactionData, transactionFingerprint, validDate };

@@ -119,4 +119,4 @@ async function upsertDailyCompanyAum(tx, { periodId, schemeName, categoryId, amc
     return { row, caseApplied: isSameDay ? "SAME_DAY_ADD" : "NEW_DAY_OVERWRITE" };
 }
 
-module.exports = { upsertDailyCompanyAum, toDateOnly };
+export { upsertDailyCompanyAum, toDateOnly };

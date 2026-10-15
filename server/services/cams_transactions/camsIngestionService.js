@@ -11,13 +11,14 @@
  *
  * Runs the CAMS email → ZIP → CSV → PostgreSQL pipeline for cron and manual use.
  */
-const { retrieveCamsEmails } = require("./emailService");
-const { processCamsReports } = require("../cams_wbr22_automation/reportService");
-const { processCamsCsvReports } = require("./csvService");
-const { persistCamsReports } = require("./camsDatabaseService");
-const { logCamsJob } = require("../../utils/cams_transactions/jobLogger");
-const { buildIngestionSummary } = require("../../utils/cams_transactions/camsIngestionSummary");
-require('dotenv').config()
+import { retrieveCamsEmails } from "./emailService.js";
+import { processCamsReports } from "../cams_wbr22_automation/reportService.js";
+import { processCamsCsvReports } from "./csvService.js";
+import { persistCamsReports } from "./camsDatabaseService.js";
+import { logCamsJob } from "../../utils/cams_transactions/jobLogger.js";
+import { buildIngestionSummary } from "../../utils/cams_transactions/camsIngestionSummary.js";
+
+import 'dotenv/config'
 
 /**
  * Run the full CAMS ingestion pipeline once, end to end.
@@ -57,4 +58,4 @@ async function runCamsIngestion() {
     }
 }
 
-module.exports = { runCamsIngestion };
+export { runCamsIngestion };

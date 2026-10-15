@@ -90,7 +90,7 @@ async function updateAumImportStatus(prisma, importId, status, extra = {}) {
     });
 }
 
-module.exports = {
+export{
     findOrCreateAumImport,
     updateAumImportStatus,
 };

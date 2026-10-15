@@ -5,9 +5,9 @@
  * request body before a task is created or updated.
  */
 // utils/ValidateTask.js
-const Joi = require("joi");
+import Joi from "joi";
 
-module.exports = Joi.object({
+export default Joi.object({
   title: Joi.string().required(),
   description: Joi.string().allow("").optional(),
   clientId: Joi.string().required(),     // plain string, mock for now

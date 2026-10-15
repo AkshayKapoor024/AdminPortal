@@ -4,7 +4,7 @@
  * They centralize status payload construction and idempotency lookup
  * without owning any Prisma transaction or write.
  */
-const { reportFingerprint, validDate } = require("./karvyTransactionPersistence");
+import { reportFingerprint, validDate } from "./karvyTransactionPersistence.js";
 
 /**
  * Build the exact row data to write to the `karvy_transaction_reports`
@@ -50,4 +50,4 @@ async function findExistingKarvyReport(tx, data) {
     return tx.karvyTransactionReport.findUnique({ where: { identifierFingerprint: data.identifierFingerprint } });
 }
 
-module.exports = { buildReportData, findExistingKarvyReport };
+export { buildReportData, findExistingKarvyReport };

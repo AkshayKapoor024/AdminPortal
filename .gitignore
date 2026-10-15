@@ -31,6 +31,8 @@ example_response.json
 
 .agents/
 
+src/
+
 .windsurf/
 
 .claude/

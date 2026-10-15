@@ -22,7 +22,7 @@
  * over "guess and risk the wrong category").
  */
 
-const { sequenceMatcherRatio } = require("./sequenceMatcher");
+import { sequenceMatcherRatio } from "./sequenceMatcher.js";
 
 /**
  * A fuzzy match must score at least this well (0-1) to be accepted.
@@ -197,7 +197,7 @@ function matchSchemeName(schemeName, matchIndex) {
     };
 }
 
-module.exports = {
+export {
     FUZZY_MATCH_THRESHOLD,
     normalizeSchemeName,
     buildSchemeMatchIndex,

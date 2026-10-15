@@ -15,11 +15,11 @@
  * final result that is handed to the database layer.
  */
 
-const fs = require("fs");
-const { Transform } = require("stream");
-const { parse } = require("csv-parse");
-const CustomError = require("../customError");
-const { CAMS_TRANSACTION_FIELDS } = require("./camsPersistence");
+import fs from "fs";
+import { Transform } from "stream";
+import { parse } from "csv-parse";
+import CustomError from "../customError.js";
+import { CAMS_TRANSACTION_FIELDS } from "./camsPersistence.js";
 
 // ---------------------------------------------------------------------
 // CAMS CSV configuration
@@ -448,7 +448,7 @@ async function parseCsvFile(csvPath) {
     });
 }
 
-module.exports = {
+export {
     isProcessableReport,
     validateCsvFile,
     normalizeColumnName,

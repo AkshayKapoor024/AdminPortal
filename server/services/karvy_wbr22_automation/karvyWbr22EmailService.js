@@ -11,15 +11,15 @@
  * reused unchanged — it only needs `downloadUrl`/`reportRequestNumber`,
  * which this service supplies).
  */
-require("dotenv").config();
+import 'dotenv/config'
 
-const { simpleParser } = require("mailparser");
-const { createImapClient, extractReportDateRange, parseCamsDateTime, extractDispatchDateTime, formatReadableDate, extractArn } = require("../../utils/cams_wbr22_automation/camsEmailParsingUtils");
-const {
+import { simpleParser } from "mailparser";
+import { createImapClient, extractReportDateRange, parseCamsDateTime, extractDispatchDateTime, formatReadableDate, extractArn } from "../../utils/cams_wbr22_automation/camsEmailParsingUtils.js";
+import {
     extractKarvyRefNumber,
     extractKarvyReportNumber,
     extractKarvyLandingUrl,
-} = require("../../utils/karvy_shared/karvyEmailParsingUtils");
+} from "../../utils/karvy_shared/karvyEmailParsingUtils.js";
 
 /**
  * Matches both real subject wordings seen for this report:
@@ -126,7 +126,7 @@ async function retrieveKarvyWbr22Emails({ lookbackDays = 1 } = {}) {
     }
 }
 
-module.exports = {
+export {
     retrieveKarvyWbr22Emails,
     parseKarvyWbr22Email,
     KARVY_WBR22_SUBJECT_REGEX,

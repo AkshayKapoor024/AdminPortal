@@ -5,8 +5,8 @@
  * pipeline work. Runs at a different time from the CAMS WBR22 job
  * (11:30 AM) so the two never contend for the same mailbox lock.
  */
-const cron = require("node-cron");
-const { runKarvyWbr22AumIngestion: runPipeline } = require("../services/karvy_wbr22_automation/karvyWbr22AumIngestionService");
+import cron from "node-cron";
+import { runKarvyWbr22AumIngestion as runPipeline } from "../services/karvy_wbr22_automation/karvyWbr22AumIngestionService.js";
 
 let running = false;
 
@@ -25,4 +25,4 @@ cron.schedule("0 12 * * *", () => {
     runKarvyWbr22AumIngestion().catch(() => {});
 }, { timezone: "Asia/Kolkata" });
 
-module.exports = { runKarvyWbr22AumIngestion };
+export { runKarvyWbr22AumIngestion };

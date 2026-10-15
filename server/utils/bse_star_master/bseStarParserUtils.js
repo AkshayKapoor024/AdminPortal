@@ -108,4 +108,4 @@ function parseBseSchemeMasterText(textContent) {
     return records;
 }
 
-module.exports = { parseBseSchemeMasterText, HEADER_INDEX_MAP };
+export { parseBseSchemeMasterText, HEADER_INDEX_MAP };

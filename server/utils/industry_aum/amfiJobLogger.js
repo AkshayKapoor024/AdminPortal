@@ -5,11 +5,11 @@
  * a separate file/log so the two pipelines never share state and the
  * existing CAMS logger is left completely untouched.
  */
-const fs = require("fs/promises");
-const path = require("path");
+import fs from "fs/promises";
+import path from "path";
 
 /** All AMFI ingestion log entries are appended to this single log file. */
-const LOG_DIRECTORY = path.join(__dirname, "..", "logs");
+const LOG_DIRECTORY = path.join(import.meta.dirname, "..", "logs");
 
 /**
  * Append one structured log line (as JSON) to `logs/amfi-ingestion.log`.
@@ -24,4 +24,4 @@ async function logAmfiJob(level, message, details = {}) {
     await fs.appendFile(path.join(LOG_DIRECTORY, "amfi-ingestion.log"), `${entry}\n`, "utf8");
 }
 
-module.exports = { logAmfiJob };
+export { logAmfiJob };

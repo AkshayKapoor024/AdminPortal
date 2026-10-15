@@ -1,6 +1,6 @@
-const { prisma } = require('../init/prisma')
+import { prisma } from '../init/prisma.js';
 
-module.exports.create = async (req, res) => {
+export const create = async (req, res) => {
     try {
         // 1. Get owner id from session — never trust the frontend for this
         const ownerId = req.session?.session_id
@@ -47,7 +47,7 @@ module.exports.create = async (req, res) => {
     }
 }
 
-module.exports.update = async (req, res) => {
+export const update = async (req, res) => {
     try {
         const ownerId = req.session?.session_id
         if (!ownerId) return res.status(401).json({ error: 'Not authenticated' })
@@ -93,7 +93,7 @@ module.exports.update = async (req, res) => {
 }
 
 // Only return tasks owned by the logged-in user
-module.exports.getAll = async (req, res) => {
+export const getAll = async (req, res) => {
     try {
         const ownerId = req.session?.session_id
         if (!ownerId) return res.status(401).json({ error: 'Not authenticated' })
@@ -115,7 +115,7 @@ module.exports.getAll = async (req, res) => {
     }
 }
 
-module.exports.getSingle = async (req, res) => {
+export const getSingle = async (req, res) => {
     try {
         const ownerId = req.session?.session_id
         if (!ownerId) return res.status(401).json({ error: 'Not authenticated' })
@@ -141,7 +141,7 @@ module.exports.getSingle = async (req, res) => {
     }
 }
 
-module.exports.remove = async (req, res) => {
+export const remove = async (req, res) => {
     try {
         const ownerId = req.session?.session_id
         if (!ownerId) return res.status(401).json({ error: 'Not authenticated' })

@@ -19,16 +19,16 @@
  * and `processCamsReports` (handle a batch of reports).
  */
 
-const CustomError = require("../../utils/customError");
-const {
+import CustomError from "../../utils/customError.js";
+import {
     createReportTempDirectory,
     hasValidDownloadUrl,
     buildReportResult,
     downloadReport,
     extractReport,
     findCsvFile,
-} = require("../../utils/cams_wbr22_automation/camsReportProcessingUtils");
-const path = require("path");
+} from "../../utils/cams_wbr22_automation/camsReportProcessingUtils.js";
+import path from "path";
 
 // ---------------------------------------------------------------------
 // Single report processing
@@ -245,7 +245,7 @@ async function processCamsReports(
 // Exports
 // ---------------------------------------------------------------------
 
-module.exports = {
+export {
     processCamsReports,
     processSingleReport,
 };

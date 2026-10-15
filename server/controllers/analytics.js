@@ -8,8 +8,8 @@
  * Automatically inspects the current financial year & quarter and selects the latest
  * available quarter's records from CompanyAum table.
  */
-const { prisma } = require("../init/prisma");
-const { getFinancialYearAndQuarterForDate } = require("../utils/industry_aum/aumPeriodUtils");
+import { prisma } from "../init/prisma.js";
+import { getFinancialYearAndQuarterForDate } from "../utils/industry_aum/aumPeriodUtils.js";
 
 /**
  * Resolves the AumPeriod to query for analytics:
@@ -69,7 +69,7 @@ async function getLatestAvailableAumPeriod(prismaClient) {
  * GET /analytics/performance_amc
  * Returns total AUM and AAUM grouped by AMC for the latest available quarter.
  */
-module.exports.getPerformanceAmc = async (req, res) => {
+export const getPerformanceAmc = async (req, res) => {
     try {
         const period = await getLatestAvailableAumPeriod(prisma);
 
@@ -125,7 +125,7 @@ module.exports.getPerformanceAmc = async (req, res) => {
  * GET /analytics/performance_catagory
  * Returns total AUM and AAUM grouped by Category for the latest available quarter.
  */
-module.exports.getPerformanceCategory = async (req, res) => {
+export const getPerformanceCategory = async (req, res) => {
     try {
         const period = await getLatestAvailableAumPeriod(prisma);
 

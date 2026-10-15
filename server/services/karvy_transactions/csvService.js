@@ -17,11 +17,11 @@
  * (handle one report) and `processKarvyCsvReports` (handle a batch).
  */
 
-const CustomError = require("../../utils/customError");
-const {
+import CustomError from "../../utils/customError.js";
+import {
     isProcessableReport,
     parseCsvFile,
-} = require("../../utils/karvy_transactions/karvyCsvParsingUtils");
+} from "../../utils/karvy_transactions/karvyCsvParsingUtils.js";
 
 // ---------------------------------------------------------------------
 // Single report processing
@@ -126,4 +126,4 @@ async function processKarvyCsvReports(reports) {
     return results;
 }
 
-module.exports = { processKarvyCsvReport, processKarvyCsvReports };
+export { processKarvyCsvReport, processKarvyCsvReports };

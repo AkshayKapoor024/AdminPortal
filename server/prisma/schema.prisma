@@ -1,16 +1,15 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
 generator client {
   provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+  generatedFileExtension = "js"
+  importFileExtension = "js"
 }
 
 datasource db {
   provider = "postgresql"
 }
 
-model User {
+model AdminUser {
   id        String   @id @default(uuid(7))
   name      String
   username  String
@@ -18,83 +17,69 @@ model User {
   password  String
   role      String
   createdAt DateTime @default(now())
+  leads     Lead[]
+  tasks     Task[]
 
-  tasks Task[]
-  leads Lead[]
-
-  @@map("users")
+  @@map("admin_users")
 }
 
 model Task {
-  id           String   @id @default(uuid(7))
+  id           String    @id @default(uuid(7))
   title        String
   description  String
-  clientId     String   // 👈 future FK to Client.id — plain string for now
+  clientId     String
   category     String
   priority     String
   status       String
   dueDate      DateTime
-  dueDateLabel String   @default("Upcoming")
-  createdAt    DateTime @default(now())
-
-  // 👇 owner — the logged-in admin user
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dueDateLabel String    @default("Upcoming")
+  createdAt    DateTime  @default(now())
+  userId       String
+  user         AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("tasks")
 }
 
 model Lead {
-  id              String   @id @default(uuid(7))
+  id              String    @id @default(uuid(7))
   name            String
-  email           String   @unique
-  mobile          String   @unique
+  email           String    @unique
+  mobile          String    @unique
   interested      String
   lead_value      String
-  pan             String   @unique
+  pan             String    @unique
   status          String
   source          String
   nature          String
   follow_up_date  DateTime
-  follow_up_label String   @default("Upcoming")
+  follow_up_label String    @default("Upcoming")
   reminder        Boolean
   description     String
   documents       String[]
-  clientId        String?  // 👈 optional, same future-proofing as Task
-
-  // 👇 owner — the logged-in admin user (renamed from primary_user)
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clientId        String?
+  userId          String
+  user            AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("leads")
 }
 
-enum CamsReportStatus {
-  RECEIVED
-  PARSED
-  STORED
-  SKIPPED
-  FAILED
-}
-
 model CamsReport {
-  id                    String           @id @default(uuid(7))
-  messageId             String?          @unique
-  identifierFingerprint String           @unique
+  id                    String            @id @default(uuid(7))
+  messageId             String?           @unique
+  identifierFingerprint String            @unique
   reportRequestNumber   String?
   reportNumber          String?
   dispatchDateTime      DateTime?
   toEmail               String?
   status                CamsReportStatus
   error                 String?
-  transactionCount      Int              @default(0)
-  processingAttempts    Int              @default(1)
+  transactionCount      Int               @default(0)
+  processingAttempts    Int               @default(1)
   parsedAt              DateTime?
   storedAt              DateTime?
-  createdAt             DateTime         @default(now())
-  updatedAt             DateTime         @updatedAt
-
-  transactions CamsTransaction[]
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  transactions          CamsTransaction[]
 
   @@index([reportRequestNumber])
   @@index([dispatchDateTime])
@@ -102,13 +87,10 @@ model CamsReport {
 }
 
 model CamsTransaction {
-  id          String   @id @default(uuid(7))
-  reportId    String
-  fingerprint String
-  createdAt   DateTime @default(now())
-
-  report CamsReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
-
+  id                String     @id @default(uuid(7))
+  reportId          String
+  fingerprint       String
+  createdAt         DateTime   @default(now())
   amcCode           String?
   folioNo           String?
   prodcode          String?
@@ -189,6 +171,7 @@ model CamsTransaction {
   amcRefNo          String?
   requestRefNo      String?
   transmissionFlag  String?
+  report            CamsReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
 
   @@unique([reportId, fingerprint])
   @@index([folioNo])
@@ -197,105 +180,53 @@ model CamsTransaction {
   @@map("cams_transactions")
 }
 
-// ============================================================================
-// AUM PERIOD
-// Represents a financial reporting period/quarter.
-// Example: FY 2025-26, Q4 = Jan-Mar 2026
-// ============================================================================
-
 model AumPeriod {
-  id              String   @id @default(uuid(7))
-
-  financialYear   String   @map("financial_year") // "2025-26"
-  quarter         Int                              // 1, 2, 3, 4
-
-  periodStart     DateTime @map("period_start") @db.Date
-  periodEnd       DateTime @map("period_end") @db.Date
-
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
-
-  // Relations
-  industryAums    IndustryAum[]
-  companyAums     CompanyAum[]
-  imports         AumImport[]
+  id                    String                 @id @default(uuid(7))
+  financialYear         String                 @map("financial_year")
+  quarter               Int
+  periodStart           DateTime               @map("period_start") @db.Date
+  periodEnd             DateTime               @map("period_end") @db.Date
+  createdAt             DateTime               @default(now()) @map("created_at")
+  updatedAt             DateTime               @updatedAt @map("updated_at")
+  imports               AumImport[]
+  companyAums           CompanyAum[]
   companyAumFileImports CompanyAumFileImport[]
+  industryAums          IndustryAum[]
 
   @@unique([financialYear, quarter])
   @@index([periodEnd])
   @@map("aum_periods")
 }
 
-
-// ============================================================================
-// AUM CATEGORY
-// Stores the complete hierarchical AMFI category structure.
-//
-// Example:
-//
-// Open Ended Schemes
-//   └── Income/Debt Oriented Schemes
-//       └── Liquid/Cash Oriented Schemes
-//           └── Overnight Fund
-//
-// parentId creates the hierarchy.
-// ============================================================================
-
 model AumCategory {
-  id              String   @id @default(uuid(7))
-
-  code            String   @unique
-  name            String
-
-  level           Int
-  isLeaf          Boolean  @default(false) @map("is_leaf")
-
-  parentId        String?  @map("parent_id")
-
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
-
-  // Self-referencing hierarchy
-  parent          AumCategory?  @relation("AumCategoryHierarchy", fields: [parentId], references: [id])
-  children        AumCategory[] @relation("AumCategoryHierarchy")
-
-  // Data
-  industryAums    IndustryAum[]
-  companyAums     CompanyAum[]
+  id           String        @id @default(uuid(7))
+  code         String        @unique
+  name         String
+  level        Int
+  isLeaf       Boolean       @default(false) @map("is_leaf")
+  parentId     String?       @map("parent_id")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  parent       AumCategory?  @relation("AumCategoryHierarchy", fields: [parentId], references: [id])
+  children     AumCategory[] @relation("AumCategoryHierarchy")
+  companyAums  CompanyAum[]
+  industryAums IndustryAum[]
 
   @@index([parentId])
   @@index([level])
   @@map("aum_categories")
 }
 
-
-// ============================================================================
-// INDUSTRY AUM
-// Stores AMFI industry-level AUM / AAUM observations.
-//
-// One row = one category for one reporting period.
-//
-// Example:
-// 2025-26 Q4 + Large Cap Fund
-// AUM  = 366045.486
-// AAUM = 405314.494
-// ============================================================================
-
 model IndustryAum {
-  id              String   @id @default(uuid(7))
-
-  periodId        String   @map("period_id")
-  categoryId      String   @map("category_id")
-
-  aum             Decimal  @db.Decimal(20, 4)
-  aaum            Decimal  @db.Decimal(20, 4)
-
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
-
-  // Relations
-  period          AumPeriod   @relation(fields: [periodId], references: [id], onDelete: Cascade)
-  category        AumCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  id         String      @id @default(uuid(7))
+  periodId   String      @map("period_id")
+  categoryId String      @map("category_id")
+  aum        Decimal     @db.Decimal(20, 4)
+  aaum       Decimal     @db.Decimal(20, 4)
+  createdAt  DateTime    @default(now()) @map("created_at")
+  updatedAt  DateTime    @updatedAt @map("updated_at")
+  category   AumCategory @relation(fields: [categoryId], references: [id])
+  period     AumPeriod   @relation(fields: [periodId], references: [id], onDelete: Cascade)
 
   @@unique([periodId, categoryId])
   @@index([categoryId])
@@ -303,77 +234,20 @@ model IndustryAum {
   @@map("industry_aum")
 }
 
-
-// ============================================================================
-// COMPANY AUM
-// Stores organization-specific AUM / AAUM observations, one row per
-// (fund, quarter).
-//
-// Uses the SAME AumCategory and AumPeriod tables as IndustryAum, which
-// is what makes direct industry-vs-company comparison possible.
-//
-// UPDATED STORAGE MODEL (daily real-time data, not quarterly batches):
-// CAMS and Karvy now both send WBR22-equivalent files DAILY, so this
-// table is a per-fund, per-quarter row that's kept continuously current
-// via three update cases (see `services/cams_wbr22/companyAumIngestionService.js`
-// and `services/karvy_wbr22_automation/karvyCompanyAumIngestionService.js`
-// for the exact logic both pipelines share):
-//   1. Another file arrives for a fund already updated TODAY (same
-//      calendar day) -> ADD to today's running total (different files
-//      on the same day represent different, non-overlapping clients).
-//   2. A file arrives for a fund whose last update was an EARLIER day
-//      in the SAME quarter -> OVERWRITE with today's fresh total.
-//   3. A file arrives for a NEW quarter -> CREATE a new row; the
-//      previous quarter's row is never touched again, frozen as
-//      permanent history.
-// `categoryId` and `amcCode` are static attributes of each fund, not
-// separate keys — grouping by either at query time gives the
-// category-wise or AMC-wise rollup, so only one table is needed.
-// ============================================================================
-
 model CompanyAum {
-  id              String   @id @default(uuid(7))
-
-  periodId        String   @map("period_id")
-  categoryId      String   @map("category_id")
-
-  // The fund's own identity — the matched, canonical master-scheme-list
-  // name. This is now the row's real identity (one row per fund per
-  // quarter); `categoryId` and `amcCode` are descriptive attributes of
-  // that fund, not separate keys, so a plain GROUP BY on either gives
-  // the category-wise or AMC-wise rollup without needing separate
-  // tables. Storing the name itself is a deliberate, confirmed change
-  // from this table's original "never store fund names" design.
-  schemeName      String   @map("scheme_name")
-
-  // From the master scheme list's "AMC Code" (e.g. "HDFCMutualFund_MF").
-  // Nullable because older/unmatched rows may not have resolved one.
-  amcCode         String?  @map("amc_code")
-
-  aum             Decimal  @db.Decimal(20, 4)
-  aaum            Decimal  @db.Decimal(20, 4)
-
-  // How many distinct calendar days' figures have been folded into
-  // `aaum` so far this quarter. Used to compute `aaum` as a running
-  // average across days (not across funds, as the old category-level
-  // table did) — incremented only when a NEW day's figures arrive
-  // (never on a same-day same-quarter top-up).
-  daysRecorded    Int      @default(0) @map("days_recorded")
-
-  // The calendar day (no time component) this row was last updated on.
-  // This is what distinguishes "another file arrived today — add to
-  // today's total" from "a new day has started — overwrite with
-  // today's fresh total" from "a new quarter has started — this
-  // becomes a new row entirely, and the old quarter's row is left
-  // untouched as permanent history."
-  lastUpdatedDate DateTime @db.Date @map("last_updated_date")
-
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
-
-  // Relations
+  id              String      @id @default(uuid(7))
+  periodId        String      @map("period_id")
+  categoryId      String      @map("category_id")
+  schemeName      String      @map("scheme_name")
+  amcCode         String?     @map("amc_code")
+  aum             Decimal     @db.Decimal(20, 4)
+  aaum            Decimal     @db.Decimal(20, 4)
+  daysRecorded    Int         @default(0) @map("days_recorded")
+  lastUpdatedDate DateTime    @map("last_updated_date") @db.Date
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+  category        AumCategory @relation(fields: [categoryId], references: [id])
   period          AumPeriod   @relation(fields: [periodId], references: [id], onDelete: Cascade)
-  category        AumCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
 
   @@unique([periodId, schemeName])
   @@index([categoryId])
@@ -382,46 +256,22 @@ model CompanyAum {
   @@map("company_aum")
 }
 
-
-// ============================================================================
-// COMPANY AUM FILE IMPORT
-// Tracks ingestion of individual company WBR22 files.
-//
-// This is deliberately a SEPARATE table from AumImport: AumImport assumes
-// exactly one file per (source, period) — true for AMFI's one-XLSX-per-
-// quarter model, but not true here, since the company's data for one
-// quarter legitimately arrives as several separate WBR22 files (one per
-// broker/dealer batch/email). So this table allows many rows per period,
-// one per uploaded file, keyed by that file's content hash — which also
-// gives us duplicate-file protection: if the exact same file is
-// accidentally uploaded twice, its hash is recognised and it is skipped
-// instead of double-adding its figures into CompanyAum.
-// ============================================================================
-
 model CompanyAumFileImport {
   id                   String          @id @default(uuid(7))
-
   periodId             String          @map("period_id")
-
   fileName             String?         @map("file_name")
   fileHash             String          @map("file_hash")
   arnNo                String?         @map("arn_no")
   reportFromDate       String?         @map("report_from_date")
   reportToDate         String?         @map("report_to_date")
-
   status               AumImportStatus @default(PENDING)
-
   matchedSchemeCount   Int             @default(0) @map("matched_scheme_count")
   unmatchedSchemeCount Int             @default(0) @map("unmatched_scheme_count")
-  totalClosingAssets   Decimal?        @db.Decimal(20, 4) @map("total_closing_assets")
-
+  totalClosingAssets   Decimal?        @map("total_closing_assets") @db.Decimal(20, 4)
   errorMessage         String?         @map("error_message")
-
   createdAt            DateTime        @default(now()) @map("created_at")
   completedAt          DateTime?       @map("completed_at")
-
-  // Relation
-  period               AumPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  period               AumPeriod       @relation(fields: [periodId], references: [id], onDelete: Cascade)
 
   @@unique([periodId, fileHash])
   @@index([periodId])
@@ -429,37 +279,19 @@ model CompanyAumFileImport {
   @@map("company_aum_file_imports")
 }
 
-
-// ============================================================================
-// AUM IMPORT
-// Tracks ingestion of AMFI/company files.
-//
-// This table is NOT the financial data itself.
-// It tells us whether a particular source file/period was discovered,
-// downloaded and successfully processed.
-// ============================================================================
-
 model AumImport {
-  id              String   @id @default(uuid(7))
-
-  source          AumImportSource
-  periodId        String   @map("period_id")
-
-  fileUrl         String?  @map("file_url")
-  fileName        String?  @map("file_name")
-
-  status          AumImportStatus @default(PENDING)
-
-  startedAt       DateTime? @map("started_at")
-  completedAt     DateTime? @map("completed_at")
-
-  errorMessage    String?  @map("error_message")
-
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
-
-  // Relation
-  period          AumPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  id           String          @id @default(uuid(7))
+  source       AumImportSource
+  periodId     String          @map("period_id")
+  fileUrl      String?         @map("file_url")
+  fileName     String?         @map("file_name")
+  status       AumImportStatus @default(PENDING)
+  startedAt    DateTime?       @map("started_at")
+  completedAt  DateTime?       @map("completed_at")
+  errorMessage String?         @map("error_message")
+  createdAt    DateTime        @default(now()) @map("created_at")
+  updatedAt    DateTime        @updatedAt @map("updated_at")
+  period       AumPeriod       @relation(fields: [periodId], references: [id], onDelete: Cascade)
 
   @@unique([source, periodId])
   @@index([periodId])
@@ -467,20 +299,397 @@ model AumImport {
   @@map("aum_imports")
 }
 
+model KarvyTransactionReport {
+  id                    String             @id @default(uuid(7))
+  messageId             String?            @unique
+  identifierFingerprint String             @unique
+  reportRequestNumber   String?
+  reportNumber          String?
+  dispatchDateTime      DateTime?
+  toEmail               String?
+  status                KarvyReportStatus
+  error                 String?
+  transactionCount      Int                @default(0)
+  processingAttempts    Int                @default(1)
+  parsedAt              DateTime?
+  storedAt              DateTime?
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  transactions          KarvyTransaction[]
 
-// ============================================================================
-// IMPORT SOURCE
-// ============================================================================
+  @@index([reportRequestNumber])
+  @@index([dispatchDateTime])
+  @@map("karvy_transaction_reports")
+}
+
+model KarvyTransaction {
+  id                        String                 @id @default(uuid(7))
+  reportId                  String
+  fingerprint               String
+  createdAt                 DateTime               @default(now())
+  productCode               String?
+  fund                      String?
+  folioNumber               String?
+  schemeCode                String?
+  fundDescription           String?
+  transactionHead           String?
+  transactionNumber         String?
+  switchRefNo               String?
+  instrumentNumber          String?
+  investorName              String?
+  transactionMode           String?
+  transactionStatus         String?
+  branchName                String?
+  branchTransactionNo       String?
+  transactionDate           String?
+  processDate               String?
+  price                     String?
+  units                     String?
+  amount                    String?
+  agentCode                 String?
+  subBrokerCode             String?
+  brokeragePercentage       String?
+  commission                String?
+  investorId                String?
+  reportDate                String?
+  reportTime                String?
+  transactionSub            String?
+  applicationNumber         String?
+  transactionId             String?
+  transactionDescription    String?
+  transactionType           String?
+  instrumentDate            String?
+  instrumentBank            String?
+  dividendOption            String?
+  purchaseAmount            String?
+  purchaseDate              String?
+  switchFundDate            String?
+  transactionFlag           String?
+  nav                       String?
+  purchaseTransactionNo     String?
+  stt                       String?
+  loadPercentage            String?
+  loadAmount                String?
+  purchaseUnits             String?
+  ihno                      String?
+  branchCode                String?
+  inwardNumber              String?
+  pan1                      String?
+  remarks                   String?
+  navDate                   String?
+  pan2                      String?
+  pan3                      String?
+  tdsAmount                 String?
+  scheme                    String?
+  plan                      String?
+  toProductCode             String?
+  tdTrxnmode                String?
+  clientId                  String?
+  dpId                      String?
+  status                    String?
+  rejTrnoOrgNo              String?
+  subTranType               String?
+  trCharges                 String?
+  atmCardStatus             String?
+  atmCardRemarks            String?
+  nctChangeDate             String?
+  isin                      String?
+  cityCategory              String?
+  portDate                  String?
+  newUnqno                  String?
+  euin                      String?
+  subBrokerArnCode          String?
+  euinValidIndicator        String?
+  euinDeclarationIndicator  String?
+  assetType                 String?
+  sipRegnDate               String?
+  divPer                    String?
+  guardPanNo                String?
+  commonAccountNumber       String?
+  exchangeOrgTrType         String?
+  electronicTransactionFlag String?
+  sipregslno                String?
+  chequeclearnce            String?
+  investorState             String?
+  retailFlag                String?
+  stampDutyCharges          String?
+  feedType                  String?
+  utrNo                     String?
+  paymentInstrumentType     String?
+  bankAcno                  String?
+  report                    KarvyTransactionReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@unique([reportId, fingerprint])
+  @@index([folioNumber])
+  @@index([pan1])
+  @@index([transactionNumber])
+  @@map("karvy_transactions")
+}
+
+model BseSchemeMaster {
+  id                        String   @id @default(uuid(7))
+  uniqueNo                  String?  @map("unique_no")
+  schemeCode                String   @map("scheme_code")
+  rtaSchemeCode             String?  @map("rta_scheme_code")
+  amcSchemeCode             String?  @map("amc_scheme_code")
+  isin                      String?  @map("isin")
+  amcCode                   String?  @map("amc_code")
+  schemeType                String?  @map("scheme_type")
+  schemePlan                String?  @map("scheme_plan")
+  schemeName                String   @map("scheme_name")
+  purchaseAllowed           String?  @map("purchase_allowed")
+  purchaseTransactionMode   String?  @map("purchase_transaction_mode")
+  minimumPurchaseAmount     String?  @map("minimum_purchase_amount")
+  additionalPurchaseAmount  String?  @map("additional_purchase_amount")
+  maximumPurchaseAmount     String?  @map("maximum_purchase_amount")
+  purchaseAmountMultiplier  String?  @map("purchase_amount_multiplier")
+  purchaseCutoffTime        String?  @map("purchase_cutoff_time")
+  redemptionAllowed         String?  @map("redemption_allowed")
+  redemptionTransactionMode String?  @map("redemption_transaction_mode")
+  minimumRedemptionQty      String?  @map("minimum_redemption_qty")
+  redemptionQtyMultiplier   String?  @map("redemption_qty_multiplier")
+  maximumRedemptionQty      String?  @map("maximum_redemption_qty")
+  redemptionAmountMinimum   String?  @map("redemption_amount_minimum")
+  redemptionAmountMaximum   String?  @map("redemption_amount_maximum")
+  redemptionAmountMultiple  String?  @map("redemption_amount_multiple")
+  redemptionCutoffTime      String?  @map("redemption_cutoff_time")
+  rtaAgentCode              String?  @map("rta_agent_code")
+  amcActiveFlag             String?  @map("amc_active_flag")
+  dividendReinvestmentFlag  String?  @map("dividend_reinvestment_flag")
+  sipFlag                   String?  @map("sip_flag")
+  stpFlag                   String?  @map("stp_flag")
+  swpFlag                   String?  @map("swp_flag")
+  switchFlag                String?  @map("switch_flag")
+  settlementType            String?  @map("settlement_type")
+  amcInd                    String?  @map("amc_ind")
+  faceValue                 String?  @map("face_value")
+  startDate                 String?  @map("start_date")
+  endDate                   String?  @map("end_date")
+  exitLoadFlag              String?  @map("exit_load_flag")
+  exitLoad                  String?  @map("exit_load")
+  lockInPeriodFlag          String?  @map("lock_in_period_flag")
+  lockInPeriod              String?  @map("lock_in_period")
+  channelPartnerCode        String?  @map("channel_partner_code")
+  reopeningDate             String?  @map("reopening_date")
+  createdAt                 DateTime @default(now()) @map("created_at")
+  updatedAt                 DateTime @updatedAt @map("updated_at")
+
+  @@index([schemeCode])
+  @@index([isin])
+  @@index([schemeName])
+  @@index([amcCode])
+  @@map("bse_scheme_masters")
+}
+
+model BseOrders {
+  id              Int       @id @default(autoincrement())
+  transaction_no  String    @unique @db.VarChar(255)
+  bse_order_id    String?   @db.VarChar(255)
+  client_code     String    @db.VarChar(255)
+  bse_scheme_code String    @db.VarChar(255)
+  order_type      String    @db.VarChar(255)
+  buy_sell        String    @db.VarChar(255)
+  buy_sell_type   String    @default("FRESH") @db.VarChar(255)
+  amount          Decimal?  @db.Decimal(15, 2)
+  units           Decimal?  @db.Decimal(18, 4)
+  folio_no        String?   @db.VarChar(255)
+  status          String    @default("PENDING") @db.VarChar(255)
+  payment_ref_id  String?   @db.VarChar(255)
+  refund_type     String?   @db.VarChar(255)
+  remarks         String?
+  last_webhook_at DateTime? @db.Timestamptz(6)
+  raw_request     String?
+  raw_response    String?
+  createdAt       DateTime  @db.Timestamptz(6)
+  updatedAt       DateTime  @db.Timestamptz(6)
+
+  @@index([bse_order_id], map: "bse_orders_bse_order_id")
+  @@index([bse_scheme_code], map: "bse_orders_bse_scheme_code")
+  @@index([client_code], map: "bse_orders_client_code")
+  @@index([status], map: "bse_orders_status")
+}
+
+model BseSchemes {
+  id                  Int      @id @default(autoincrement())
+  bse_scheme_code     String?  @unique @db.VarChar(255)
+  isin                String?  @db.VarChar(255)
+  scheme_name         String?  @db.VarChar(255)
+  amc_code            String?  @db.VarChar(255)
+  min_sip_amount      Decimal? @db.Decimal(10, 2)
+  min_purchase_amount Decimal? @db.Decimal(10, 2)
+  sip_multiplier      Decimal? @db.Decimal(10, 2)
+  createdAt           DateTime @db.Timestamptz(6)
+  updatedAt           DateTime @db.Timestamptz(6)
+}
+
+model BseStatusHistories {
+  id              Int       @id @default(autoincrement())
+  entity_type     String    @db.VarChar(255)
+  entity_id       String    @db.VarChar(255)
+  from_status     String?   @db.VarChar(255)
+  to_status       String    @db.VarChar(255)
+  event_name      String?   @db.VarChar(255)
+  msgcode         String?   @db.VarChar(255)
+  request_id      String?   @db.VarChar(255)
+  remarks         String?
+  details         String?
+  event_timestamp DateTime? @db.Timestamptz(6)
+  createdAt       DateTime  @db.Timestamptz(6)
+  updatedAt       DateTime  @db.Timestamptz(6)
+
+  @@index([entity_type, entity_id], map: "bse_status_histories_entity_type_entity_id")
+  @@index([event_timestamp], map: "bse_status_histories_event_timestamp")
+  @@index([request_id], map: "bse_status_histories_request_id")
+}
+
+model BseUccs {
+  id              Int       @id @default(autoincrement())
+  client_code     String    @unique @db.VarChar(255)
+  pan             String    @db.VarChar(255)
+  first_name      String?   @db.VarChar(255)
+  middle_name     String?   @db.VarChar(255)
+  last_name       String?   @db.VarChar(255)
+  dob             String?   @db.VarChar(255)
+  gender          String?   @db.VarChar(255)
+  email           String?   @db.VarChar(255)
+  mobile          String?   @db.VarChar(255)
+  address1        String?   @db.VarChar(255)
+  address2        String?   @db.VarChar(255)
+  address3        String?   @db.VarChar(255)
+  city            String?   @db.VarChar(255)
+  state           String?   @db.VarChar(255)
+  pincode         String?   @db.VarChar(255)
+  ifsc            String?   @db.VarChar(255)
+  account_number  String?   @db.VarChar(255)
+  account_type    String?   @db.VarChar(255)
+  bse_status      Int?
+  raw_response    String?
+  last_webhook_at DateTime? @db.Timestamptz(6)
+  two_fa_data     Json?     @db.Json
+  createdAt       DateTime  @db.Timestamptz(6)
+  updatedAt       DateTime  @db.Timestamptz(6)
+}
+
+model Clients {
+  id           Int            @id @default(autoincrement())
+  pan          String?        @unique @db.VarChar(255)
+  inv_name     String         @db.VarChar(255)
+  createdAt    DateTime       @db.Timestamptz(6)
+  updatedAt    DateTime       @db.Timestamptz(6)
+  Transactions Transactions[]
+}
+
+model NavHistories {
+  id        Int       @id @default(autoincrement())
+  date      DateTime? @db.Timestamptz(6)
+  nav       Float?
+  createdAt DateTime  @db.Timestamptz(6)
+  updatedAt DateTime  @db.Timestamptz(6)
+  schemeId  Int?
+  Schemes   Schemes?  @relation(fields: [schemeId], references: [id])
+
+  @@unique([schemeId, date], map: "nav_histories_scheme_id_date")
+}
+
+model RefreshTokens {
+  id              Int       @id @default(autoincrement())
+  token           String    @unique @db.VarChar(255)
+  userId          Int
+  expiresAt       DateTime  @db.Timestamptz(6)
+  revokedAt       DateTime? @db.Timestamptz(6)
+  replacedByToken String?   @db.VarChar(255)
+  createdAt       DateTime  @db.Timestamptz(6)
+  updatedAt       DateTime  @db.Timestamptz(6)
+  Users           Users     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "refresh_tokens_user_id")
+}
+
+model Schemes {
+  id                  Int            @id @default(autoincrement())
+  amc_code            String?        @db.VarChar(255)
+  prodcode            String?        @db.VarChar(255)
+  scheme_name         String?        @db.VarChar(255)
+  isin                String?        @db.VarChar(255)
+  amfi_code           String?        @db.VarChar(255)
+  min_sip_amount      Decimal?       @default(500) @db.Decimal(10, 2)
+  min_purchase_amount Decimal?       @default(500) @db.Decimal(10, 2)
+  return_3y           String?        @db.VarChar(255)
+  createdAt           DateTime       @db.Timestamptz(6)
+  updatedAt           DateTime       @db.Timestamptz(6)
+  NavHistories        NavHistories[]
+  Transactions        Transactions[]
+
+  @@unique([amc_code, prodcode], map: "schemes_amc_code_prodcode")
+}
+
+model Transactions {
+  id          Int       @id @default(autoincrement())
+  folio_no    String?   @db.VarChar(255)
+  trxntype    String?   @db.VarChar(255)
+  txn_type    String?   @db.VarChar(255)
+  trxn_nature String?   @db.VarChar(255)
+  trxnno      String?   @db.VarChar(255)
+  traddate    DateTime? @db.Timestamptz(6)
+  postdate    DateTime? @db.Timestamptz(6)
+  purprice    Float?
+  units       Float?
+  amount      Float?
+  createdAt   DateTime  @db.Timestamptz(6)
+  updatedAt   DateTime  @db.Timestamptz(6)
+  clientId    Int?
+  schemeId    Int?
+  Clients     Clients?  @relation(fields: [clientId], references: [id])
+  Schemes     Schemes?  @relation(fields: [schemeId], references: [id])
+}
+
+model Users {
+  id                 Int             @id @default(autoincrement())
+  phone              String          @db.VarChar(255)
+  mpin               String?         @db.VarChar(255)
+  panNumber          String          @unique @db.VarChar(255)
+  failedMpinAttempts Int             @default(0)
+  lockoutUntil       DateTime?       @db.Timestamptz(6)
+  email              String?         @db.VarChar(255)
+  onboarding_status  String?         @default("NOT_STARTED") @db.VarChar(255)
+  createdAt          DateTime        @db.Timestamptz(6)
+  updatedAt          DateTime        @db.Timestamptz(6)
+  RefreshTokens      RefreshTokens[]
+}
+
+model bse_webhook_events {
+  id            Int       @id @default(autoincrement())
+  request_id    String    @unique(map: "bse_webhook_events_request_id") @db.VarChar(255)
+  event_type    String?   @db.VarChar(255)
+  event_name    String?   @db.VarChar(255)
+  msgcode       String?   @db.VarChar(255)
+  client_code   String?   @db.VarChar(255)
+  status        String    @default("RECEIVED") @db.VarChar(255)
+  error_message String?
+  retry_count   Int?      @default(0)
+  payload       String?
+  received_at   DateTime? @db.Timestamptz(6)
+  processed_at  DateTime? @db.Timestamptz(6)
+  createdAt     DateTime  @db.Timestamptz(6)
+  updatedAt     DateTime  @db.Timestamptz(6)
+
+  @@index([client_code], map: "bse_webhook_events_client_code")
+  @@index([event_type], map: "bse_webhook_events_event_type")
+  @@index([status], map: "bse_webhook_events_status")
+}
+
+enum CamsReportStatus {
+  RECEIVED
+  PARSED
+  STORED
+  SKIPPED
+  FAILED
+}
 
 enum AumImportSource {
   AMFI
   COMPANY
 }
-
-
-// ============================================================================
-// IMPORT STATUS
-// ============================================================================
 
 enum AumImportStatus {
   PENDING
@@ -490,18 +699,6 @@ enum AumImportStatus {
   FAILED
 }
 
-
-// ============================================================================
-// KARVY (KFINTECH) TRANSACTIONS
-//
-// Mirrors the CamsReport / CamsTransaction pattern exactly (same status
-// lifecycle, same identifier-fingerprint idempotency strategy, same
-// "every field stored as a string" convention), but as fully separate
-// models — Karvy's "Transaction Feeds Report" CSV has 90 columns with
-// entirely different names from CAMS's 80-column WBR2 format, so the
-// two are not interchangeable and must not share a table.
-// ============================================================================
-
 enum KarvyReportStatus {
   RECEIVED
   PARSED
@@ -509,196 +706,3 @@ enum KarvyReportStatus {
   SKIPPED
   FAILED
 }
-
-model KarvyTransactionReport {
-  id                    String            @id @default(uuid(7))
-  messageId             String?           @unique
-  identifierFingerprint String            @unique
-  reportRequestNumber   String?
-  reportNumber          String?
-  dispatchDateTime      DateTime?
-  toEmail               String?
-  status                KarvyReportStatus
-  error                 String?
-  transactionCount      Int               @default(0)
-  processingAttempts    Int               @default(1)
-  parsedAt              DateTime?
-  storedAt              DateTime?
-  createdAt             DateTime          @default(now())
-  updatedAt             DateTime          @updatedAt
-
-  transactions KarvyTransaction[]
-
-  @@index([reportRequestNumber])
-  @@index([dispatchDateTime])
-  @@map("karvy_transaction_reports")
-}
-
-model KarvyTransaction {
-  id          String   @id @default(uuid(7))
-  reportId    String
-  fingerprint String
-  createdAt   DateTime @default(now())
-
-  report KarvyTransactionReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
-
-  productCode                String?
-  fund                       String?
-  folioNumber                String?
-  schemeCode                 String?
-  fundDescription            String?
-  transactionHead            String?
-  transactionNumber          String?
-  switchRefNo                String?
-  instrumentNumber           String?
-  investorName               String?
-  transactionMode            String?
-  transactionStatus          String?
-  branchName                 String?
-  branchTransactionNo        String?
-  transactionDate            String?
-  processDate                String?
-  price                      String?
-  units                      String?
-  amount                     String?
-  agentCode                  String?
-  subBrokerCode              String?
-  brokeragePercentage        String?
-  commission                 String?
-  investorId                 String?
-  reportDate                 String?
-  reportTime                 String?
-  transactionSub             String?
-  applicationNumber          String?
-  transactionId              String?
-  transactionDescription     String?
-  transactionType            String?
-  instrumentDate             String?
-  instrumentBank             String?
-  dividendOption             String?
-  purchaseAmount             String?
-  purchaseDate               String?
-  switchFundDate             String?
-  transactionFlag            String?
-  nav                        String?
-  purchaseTransactionNo      String?
-  stt                        String?
-  loadPercentage             String?
-  loadAmount                 String?
-  purchaseUnits              String?
-  ihno                       String?
-  branchCode                 String?
-  inwardNumber               String?
-  pan1                       String?
-  remarks                    String?
-  navDate                    String?
-  pan2                       String?
-  pan3                       String?
-  tdsAmount                  String?
-  scheme                     String?
-  plan                       String?
-  toProductCode              String?
-  tdTrxnmode                 String?
-  clientId                   String?
-  dpId                       String?
-  status                     String?
-  rejTrnoOrgNo               String?
-  subTranType                String?
-  trCharges                  String?
-  atmCardStatus              String?
-  atmCardRemarks             String?
-  nctChangeDate              String?
-  isin                       String?
-  cityCategory               String?
-  portDate                   String?
-  newUnqno                   String?
-  euin                       String?
-  subBrokerArnCode           String?
-  euinValidIndicator         String?
-  euinDeclarationIndicator   String?
-  assetType                  String?
-  sipRegnDate                String?
-  divPer                     String?
-  guardPanNo                 String?
-  commonAccountNumber        String?
-  exchangeOrgTrType          String?
-  electronicTransactionFlag  String?
-  sipregslno                 String?
-  chequeclearnce             String?
-  investorState              String?
-  retailFlag                 String?
-  stampDutyCharges           String?
-  feedType                   String?
-  utrNo                      String?
-  paymentInstrumentType      String?
-  bankAcno                   String?
-
-  @@unique([reportId, fingerprint])
-  @@index([folioNumber])
-  @@index([pan1])
-  @@index([transactionNumber])
-  @@map("karvy_transactions")
-}
-
-// ============================================================================
-// BSE STAR SCHEME MASTER
-// Stores the master list of all schemes provided daily by BSE Star MF.
-// This list maps scheme names to scheme types (categories) and AMC codes.
-// ============================================================================
-
-model BseSchemeMaster {
-  id                         String   @id @default(uuid(7))
-  uniqueNo                   String?  @map("unique_no")
-  schemeCode                 String   @map("scheme_code")
-  rtaSchemeCode              String?  @map("rta_scheme_code")
-  amcSchemeCode              String?  @map("amc_scheme_code")
-  isin                       String?  @map("isin")
-  amcCode                    String?  @map("amc_code")
-  schemeType                 String?  @map("scheme_type")
-  schemePlan                 String?  @map("scheme_plan")
-  schemeName                 String   @map("scheme_name")
-  purchaseAllowed            String?  @map("purchase_allowed")
-  purchaseTransactionMode    String?  @map("purchase_transaction_mode")
-  minimumPurchaseAmount      String?  @map("minimum_purchase_amount")
-  additionalPurchaseAmount   String?  @map("additional_purchase_amount")
-  maximumPurchaseAmount      String?  @map("maximum_purchase_amount")
-  purchaseAmountMultiplier   String?  @map("purchase_amount_multiplier")
-  purchaseCutoffTime         String?  @map("purchase_cutoff_time")
-  redemptionAllowed          String?  @map("redemption_allowed")
-  redemptionTransactionMode  String?  @map("redemption_transaction_mode")
-  minimumRedemptionQty       String?  @map("minimum_redemption_qty")
-  redemptionQtyMultiplier    String?  @map("redemption_qty_multiplier")
-  maximumRedemptionQty       String?  @map("maximum_redemption_qty")
-  redemptionAmountMinimum    String?  @map("redemption_amount_minimum")
-  redemptionAmountMaximum    String?  @map("redemption_amount_maximum")
-  redemptionAmountMultiple   String?  @map("redemption_amount_multiple")
-  redemptionCutoffTime       String?  @map("redemption_cutoff_time")
-  rtaAgentCode               String?  @map("rta_agent_code")
-  amcActiveFlag              String?  @map("amc_active_flag")
-  dividendReinvestmentFlag   String?  @map("dividend_reinvestment_flag")
-  sipFlag                    String?  @map("sip_flag")
-  stpFlag                    String?  @map("stp_flag")
-  swpFlag                    String?  @map("swp_flag")
-  switchFlag                 String?  @map("switch_flag")
-  settlementType             String?  @map("settlement_type")
-  amcInd                     String?  @map("amc_ind")
-  faceValue                  String?  @map("face_value")
-  startDate                  String?  @map("start_date")
-  endDate                    String?  @map("end_date")
-  exitLoadFlag               String?  @map("exit_load_flag")
-  exitLoad                   String?  @map("exit_load")
-  lockInPeriodFlag           String?  @map("lock_in_period_flag")
-  lockInPeriod               String?  @map("lock_in_period")
-  channelPartnerCode         String?  @map("channel_partner_code")
-  reopeningDate              String?  @map("reopening_date")
-
-  createdAt                  DateTime @default(now()) @map("created_at")
-  updatedAt                  DateTime @updatedAt @map("updated_at")
-
-  @@index([schemeCode])
-  @@index([isin])
-  @@index([schemeName])
-  @@index([amcCode])
-  @@map("bse_scheme_masters")
-}
-

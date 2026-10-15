@@ -2,7 +2,7 @@
  * Database-report helpers. They centralize status payload construction and
  * idempotency lookup without owning any Prisma transaction or write.
  */
-const { reportFingerprint, validDate } = require("./camsPersistence");
+import { reportFingerprint, validDate } from "./camsPersistence.js";
 
 /**
  * Build the exact row data to write to the `camsReport` table for a given
@@ -48,4 +48,4 @@ async function findExistingCamsReport(tx, data) {
     return tx.camsReport.findUnique({ where: { identifierFingerprint: data.identifierFingerprint } });
 }
 
-module.exports = { buildReportData, findExistingCamsReport };
+export { buildReportData, findExistingCamsReport };

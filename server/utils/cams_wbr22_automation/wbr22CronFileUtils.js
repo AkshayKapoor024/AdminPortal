@@ -5,9 +5,9 @@
  * by the established Company AUM importer, and resolves the period from the
  * report's CAMS `To Date` without relying on server-local timezone settings.
  */
-const fs = require("fs/promises");
-const path = require("path");
-const CustomError = require("../customError");
+import fs from "fs/promises";
+import path from "path";
+import CustomError from "../customError.js";
 
 function camsDateToIsoDate(value) {
     const match = String(value || "").trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
@@ -42,4 +42,4 @@ async function buildWbr22CronFile(extractedReport) {
     };
 }
 
-module.exports = { camsDateToIsoDate, buildWbr22CronFile };
+export { camsDateToIsoDate, buildWbr22CronFile };

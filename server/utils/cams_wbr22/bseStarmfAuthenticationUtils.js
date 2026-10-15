@@ -5,7 +5,7 @@
  * needed by the master-scheme endpoint. Credentials and tokens never enter
  * errors or logs.
  */
-const CustomError = require("../customError");
+import CustomError from "../customError.js";
 
 const BSE_STARMF_LOGIN_URL = "https://starmfv2demo.bseindia.com/api/login";
 
@@ -65,4 +65,4 @@ async function authenticateBseStarmf() {
     return token;
 }
 
-module.exports = { authenticateBseStarmf, findBearerToken, BSE_STARMF_LOGIN_URL };
+export { authenticateBseStarmf, findBearerToken, BSE_STARMF_LOGIN_URL };

@@ -7,7 +7,7 @@
  * Performs ASP.NET GET -> extracts __VIEWSTATE, __EVENTVALIDATION -> POST request with ddlTypeOption=SCHEMEMASTER.
  */
 
-const CustomError = require("../customError");
+import CustomError from "../customError.js";
 
 const BSE_SCHEME_MASTER_URL = "https://www.bsestarmf.in/RptSchemeMaster.aspx";
 
@@ -83,4 +83,4 @@ async function fetchLatestBseSchemeMasterText() {
     return textContent;
 }
 
-module.exports = { fetchLatestBseSchemeMasterText, BSE_SCHEME_MASTER_URL };
+export { fetchLatestBseSchemeMasterText, BSE_SCHEME_MASTER_URL };

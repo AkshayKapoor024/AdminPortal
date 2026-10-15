@@ -19,8 +19,8 @@
  * apostrophe-stripping.
  */
 
-const { parse } = require("csv-parse/sync");
-const CustomError = require("../customError");
+import { parse } from "csv-parse/sync";
+import CustomError from "../customError.js";
 
 /**
  * Parse a Karvy ClientWise AUM Report CSV buffer into a map of fund
@@ -82,4 +82,4 @@ function parseKarvyWbr22File(buffer) {
     return schemeTotals;
 }
 
-module.exports = { parseKarvyWbr22File };
+export { parseKarvyWbr22File };

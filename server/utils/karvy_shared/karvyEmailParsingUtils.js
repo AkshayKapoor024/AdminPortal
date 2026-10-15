@@ -27,7 +27,7 @@
  *      `cams_wbr22_automation/camsEmailParsingUtils.js` directly.
  */
 
-const { extractValue } = require("../cams_wbr22_automation/camsEmailParsingUtils");
+import { extractValue } from "../cams_wbr22_automation/camsEmailParsingUtils.js";
 
 /**
  * KFintech's report-resolution landing page. Following it downloads a
@@ -196,7 +196,7 @@ function extractKarvyLandingUrl({ html }) {
     return decoded;
 }
 
-module.exports = {
+export {
     KARVY_LANDING_PAGE_BASE,
     extractKarvyRefNumber,
     extractKarvyReportNumber,

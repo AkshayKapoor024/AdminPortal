@@ -15,21 +15,21 @@
  * type). Manually following a URL produced this way was confirmed to
  * download a real, working ZIP.
  */
-require("dotenv").config();
+import 'dotenv/config'
 
-const { simpleParser } = require("mailparser");
-const {
+import { simpleParser } from "mailparser";
+import {
     createImapClient,
     extractReportDateRange,
     parseCamsDateTime,
     extractDispatchDateTime,
     formatReadableDate,
-} = require("../../utils/cams_wbr22_automation/camsEmailParsingUtils");
-const {
+} from "../../utils/cams_wbr22_automation/camsEmailParsingUtils.js";
+import {
     extractKarvyRefNumber,
     extractKarvyReportNumber,
     extractKarvyLandingUrl,
-} = require("../../utils/karvy_shared/karvyEmailParsingUtils");
+} from "../../utils/karvy_shared/karvyEmailParsingUtils.js";
 
 /** Matches "Subscribed Transaction Feeds Report for Ref. No. : ..." — deliberately requires "Feeds" so the shorter, unrelated "Transaction Report" subject is not matched. */
 const KARVY_TRANSACTIONS_SUBJECT_REGEX = /Transaction\s+Feeds\s+Report/i;
@@ -129,7 +129,7 @@ async function retrieveKarvyTransactionEmails() {
     }
 }
 
-module.exports = {
+export {
     retrieveKarvyTransactionEmails,
     parseKarvyTransactionEmail,
     KARVY_TRANSACTIONS_SUBJECT_REGEX,

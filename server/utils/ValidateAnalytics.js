@@ -1,4 +1,4 @@
-const Joi = require('joi')
+import Joi from 'joi'
 
 /**
  * Validation schema for analytics requests.
@@ -10,4 +10,4 @@ const ValidateAnalytics = Joi.object({
     limit: Joi.number().integer().positive().optional(),
 }).unknown(true)
 
-module.exports = ValidateAnalytics
+export default ValidateAnalytics

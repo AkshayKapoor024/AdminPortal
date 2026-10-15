@@ -9,9 +9,8 @@
  * the AumImport status check) and self-healing if a quarter's data was
  * published later than expected.
  */
-const cron = require("node-cron");
-const { runAmfiIngestion: runPipeline } = require("../services/industry_aum/amfiIngestionService");
-
+import cron from "node-cron";
+import { runAmfiIngestion as runPipeline } from "../services/industry_aum/amfiIngestionService.js";
 /** True while a run is in progress, to prevent overlapping runs. */
 let running = false;
 
@@ -42,4 +41,4 @@ cron.schedule("0 8 1 * *", () => {
     runAmfiIngestion().catch(() => {});
 }, { timezone: "Asia/Kolkata" });
 
-module.exports = { runAmfiIngestion };
+export { runAmfiIngestion };

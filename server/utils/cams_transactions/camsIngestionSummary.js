@@ -18,4 +18,4 @@ function buildIngestionSummary(reports) {
     }, { transactions: 0 });
 }
 
-module.exports = { buildIngestionSummary };
+export { buildIngestionSummary };

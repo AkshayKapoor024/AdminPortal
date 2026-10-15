@@ -16,9 +16,9 @@
  * database layer.
  */
 
-const fs = require("fs");
-const { parse } = require("csv-parse");
-const CustomError = require("../customError");
+import fs from "fs";
+import { parse } from "csv-parse";
+import CustomError from "../customError.js";
 
 // ---------------------------------------------------------------------
 // Report-level validation
@@ -213,7 +213,7 @@ async function parseCsvFile(csvPath) {
     });
 }
 
-module.exports = {
+export{
     isProcessableReport,
     validateCsvFile,
     normalizeColumnName,

@@ -1,100 +1,134 @@
-// Application entry point.
+// Application entry point (ESM)
 //
-// This file wires together the Express app: middleware (body parsing,
-// CORS, cookies, sessions), the background cron jobs, and the three
-// route groups (auth, tasks, leads). Run this file to start the server.
+// Wires together the Express app: middleware (body parsing, CORS,
+// cookies, sessions), background cron jobs, and route groups.
 
-// Dependencies 
-const express = require('express')
-const app = express()
+import express from "express";
+import dotenv from "dotenv";
+import session from "express-session";
+import cookieParser from "cookie-parser";
+import cors from "cors";
+import swaggerUi from "swagger-ui-express";
 
-require('dotenv').config()
+// Load env first — before anything reads process.env
+dotenv.config();
 
-// Start date label update cron job
-require('./jobs/dateStatusJob')
-// Start daily CAMS ingestion cron job
-require('./jobs/camsIngestionJob')
-// Start monthly AMFI industry AUM ingestion cron job
-require('./jobs/amfiIngestionJob')
-// Start daily BSE Star Scheme Master ingestion cron job
-require('./jobs/bseStarSchemeMasterIngestionJob')
-// Start daily CAMS WBR22 → Company AUM ingestion cron job
-require('./jobs/wbr22AumIngestionJob')
-// Start daily Karvy WBR22 → Company AUM ingestion cron job
-require('./jobs/karvyWbr22AumIngestionJob')
-// Start daily Karvy transactions ingestion cron job
-require('./jobs/karvyTransactionIngestionJob')
+// Cron jobs — importing them starts the schedulers
+import "./jobs/dateStatusJob.js";
+import "./jobs/camsIngestionJob.js";
+import "./jobs/amfiIngestionJob.js";
+import "./jobs/bseStarSchemeMasterIngestionJob.js";
+import "./jobs/wbr22AumIngestionJob.js";
+import "./jobs/karvyWbr22AumIngestionJob.js";
+import "./jobs/karvyTransactionIngestionJob.js";
 
-const session = require('express-session')
-const cookieParser = require('cookie-parser')
+// Routers
+import { clientsDocsRouter, swaggerSpec } from "./routes/clients.js";
+import authRouter from "./routes/authentication.js";
+import taskRouter from "./routes/tasks.js";
+import leadRouter from "./routes/leads.js";
+import companyAumRouter from "./routes/companyAum.js";
+import analyticsRouter from "./routes/analytics.js";
 
-const authRouter = require('./routes/authentication')
-const taskRouter = require('./routes/tasks')
-const leadRouter = require('./routes/leads')
-const companyAumRouter = require('./routes/companyAum')
-const analyticsRouter = require('./routes/analytics')
+const app = express();
+const port = process.env.PORT || 3000;
 
-const cors = require('cors')
+// ----------------------------------------------------------------------------
+// Middleware
+// ----------------------------------------------------------------------------
 
-let port = process.env.PORT
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
+app.use(
+  cors({
+    origin: ["http://localhost:5173" , `http://localhost:${process.env.PORT}`],
+    credentials: true,
+  })
+);
 
-// Setting url encoded true to read encoded query and params 
-app.use(express.urlencoded({ 'extended': true }))
-// Using express .json to directly read json data as javascript objects
-app.use(express.json())
+app.use(cookieParser(process.env.SECRET));
 
-// Setting cors policy for incoming requests
-app.use(cors({ origin: ['http://localhost:5173'], credentials: true }))
-
-
-// Adding cookie parser with secret to read and set cookies
-app.use(cookieParser(process.env.SECRET))
-
-// Adding session related credentials
-app.use(session({
+app.use(
+  session({
     secret: process.env.SECRET,
     resave: false,
     saveUninitialized: false,
     cookie: {
-        secure: false,
-        httpOnly: true,
-        sameSite: 'lax',
-        maxAge: 24 * 60 * 60 * 1000
-    }
-}))
+      secure: false,
+      httpOnly: true,
+      sameSite: "lax",
+      maxAge: 24 * 60 * 60 * 1000,
+    },
+  })
+);
 
-// Homepage route
-app.get('/', (req, res) => {
-    res.status(200).send({ 'message': 'Server is functional' })
-})
+// ----------------------------------------------------------------------------
+// Swagger API documentation
+// ----------------------------------------------------------------------------
 
-// Auth routes router
-app.use('/api/auth', authRouter)
+app.use(
+  "/api-docs",
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerSpec, {
+    customCss: ".swagger-ui .topbar { display: none }",
+    swaggerOptions: {
+      docExpansion: "list",
+      persistAuthorization: true,
+      displayRequestDuration: true,
+      filter: true,
+      tryItOutEnabled: true,
+    },
+  })
+);
 
+// Mounts the router that exposes /api-docs.json and any doc-related routes
+app.use(clientsDocsRouter);
 
-// Task routes router
-app.use('/api/tasks', taskRouter)
+// memory.js
 
-// Lead apis
-app.use('/api/leads', leadRouter)
+setInterval(() => {
+  const m = process.memoryUsage();
 
-// Company AUM import apis
-app.use('/api/company-aum', companyAumRouter)
+  console.clear();
 
-// Business Analytics apis (mounted on both /api/analytics and /analytics)
-app.use('/api/analytics', analyticsRouter)
-app.use('/analytics', analyticsRouter)
+  console.table({
+    RSS_MB: (m.rss / 1024 / 1024).toFixed(2),
+    HeapUsed_MB: (m.heapUsed / 1024 / 1024).toFixed(2),
+    HeapTotal_MB: (m.heapTotal / 1024 / 1024).toFixed(2),
+    External_MB: (m.external / 1024 / 1024).toFixed(2)
+  });
+}, 5000);
 
-// Central error handling middleware for wrapAsync / customError
+// ----------------------------------------------------------------------------
+// Routes
+// ----------------------------------------------------------------------------
+
+app.get("/", (req, res) => {
+  res.status(200).send({ message: "Server is functional" });
+});
+
+app.use("/api/auth", authRouter);
+app.use("/api/tasks", taskRouter);
+app.use("/api/leads", leadRouter);
+app.use("/api/company-aum", companyAumRouter);
+
+// Business analytics — mounted on both prefixes
+app.use("/api/analytics", analyticsRouter);
+app.use("/analytics", analyticsRouter);
+
+// ----------------------------------------------------------------------------
+// Central error handling
+// ----------------------------------------------------------------------------
+
 app.use((err, req, res, next) => {
-    const status = err.status || 500
-    res.status(status).json({
-        error: err.name || 'Error',
-        message: err.message || 'Internal server error',
-    })
-})
+  const status = err.status || 500;
+  res.status(status).json({
+    error: err.name || "Error",
+    message: err.message || "Internal server error",
+  });
+});
 
 app.listen(port, () => {
-    console.log(`App listening at port http://localhost:${port}`)
-})
+  console.log(`App listening at port http://localhost:${port}`);
+});

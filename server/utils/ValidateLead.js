@@ -11,9 +11,9 @@
  * - `clientId` is a plain string for now; will become a FK to `Client`
  *   once that model exists.
  */
-const joi = require('joi')
+import joi from 'joi'
 
-module.exports = new joi.object({
+export default new joi.object({
   id: joi.string().optional(),
   name: joi.string().required(),
   email: joi.string().email().required(),

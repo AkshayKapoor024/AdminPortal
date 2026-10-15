@@ -23,16 +23,16 @@
  * the caller can see exactly what happened.
  */
 
-const crypto = require("crypto");
+import crypto from "crypto";
 
-const { prisma } = require("../../init/prisma");
-const { getFinancialYearAndQuarterForDate, findOrCreateAumPeriod } = require("../../utils/industry_aum/aumPeriodUtils");
-const { fetchMasterSchemeListFromDb } = require("../../utils/cams_wbr22/masterSchemeListUtils");
-const { buildSchemeMatchIndex, matchSchemeName, normalizeSchemeName } = require("../../utils/cams_wbr22/schemeNameMatchingUtils");
-const { parseWbr22File } = require("../../utils/cams_wbr22/wbr22ParsingUtils");
-const { createCategoryResolver } = require("../../utils/industry_aum/aumCategoryResolver");
-const { upsertDailyCompanyAum } = require("../../utils/cams_wbr22/companyAumUpsertUtils");
-const CustomError = require("../../utils/customError");
+import { prisma } from "../../init/prisma.js";
+import { getFinancialYearAndQuarterForDate, findOrCreateAumPeriod } from "../../utils/industry_aum/aumPeriodUtils.js";
+import { fetchMasterSchemeListFromDb } from "../../utils/cams_wbr22/masterSchemeListUtils.js";
+import { buildSchemeMatchIndex, matchSchemeName, normalizeSchemeName } from "../../utils/cams_wbr22/schemeNameMatchingUtils.js";
+import { parseWbr22File } from "../../utils/cams_wbr22/wbr22ParsingUtils.js";
+import { createCategoryResolver } from "../../utils/industry_aum/aumCategoryResolver.js";
+import { upsertDailyCompanyAum } from "../../utils/cams_wbr22/companyAumUpsertUtils.js";
+import CustomError from "../../utils/customError.js";
 
 /** SHA-256 hash, used for file-level dedup. */
 function sha256(value) {
@@ -312,4 +312,4 @@ async function ingestCompanyAumFiles({ files, quarterDateIso, matchIndex: suppli
     };
 }
 
-module.exports = { ingestCompanyAumFiles, prepareCompanyAumMatchIndex };
+export { ingestCompanyAumFiles, prepareCompanyAumMatchIndex };

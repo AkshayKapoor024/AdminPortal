@@ -1,9 +1,9 @@
 // Daily cron job that keeps task/lead "status label" fields (Expired,
 // Today, Tomorrow, or a formatted date) in sync with the current date,
 // so the admin UI doesn't have to recompute this on every page load.
-const cron = require('node-cron')
-const { prisma } = require('../init/prisma')
-const getDateLabel = require('../utils/date_processor')
+import cron from 'node-cron';
+import { prisma } from '../init/prisma.js';
+import getDateLabel from '../utils/date_processor.js';
 
 // Schedule cron job everyday at 8:00 AM
 

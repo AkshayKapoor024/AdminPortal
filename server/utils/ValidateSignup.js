@@ -4,9 +4,9 @@
  * Used by `middlewares/middleware.js` (`SignupValidate`) to check the
  * request body before a new user account is created.
  */
-const joi = require('joi')
+import joi from 'joi'
 
-module.exports = new joi.object({
+export default new joi.object({
     name:joi.string().required(),
     username:joi.string().required(),
     email:joi.string().required(),

@@ -14,14 +14,14 @@
  * for each report.
  */
 
-const fs = require("fs/promises");
-const path = require("path");
-const os = require("os");
-const crypto = require("crypto");
-const { execFile } = require("child_process");
-const { promisify } = require("util");
+import fs from "fs/promises";
+import path from "path";
+import os from "os";
+import crypto from "crypto";
+import { execFile } from "child_process";
+import { promisify } from "util";
 
-const CustomError = require("../customError");
+import CustomError from "../customError.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -431,7 +431,7 @@ async function findCsvFile(directory) {
     return csvPath;
 }
 
-module.exports = {
+export {
     TEMP_ROOT,
     resolveArchiveExtractor,
     createReportTempDirectory,
